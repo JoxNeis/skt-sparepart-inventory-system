@@ -5,14 +5,14 @@
 -- Replaces: select_vendors
 -- =====================================================================
 SELECT
-    v.id,
-    v.code,
-    v.[name],
-    v.company_name,
-    v.email
+	v.id,
+	v.code,
+	v.[name],
+	v.company_name,
+	v.email
 FROM
-    vendors AS v
+	vendors AS v
 WHERE
-    v.deleted_at IS NULL
+	v.deleted_at IS NULL
 ORDER BY
-    v.[name];
+	v.[name];

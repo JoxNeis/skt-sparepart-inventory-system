@@ -7,25 +7,25 @@
 -- Replaces: create_activity_log
 -- =====================================================================
 PARAMETERS
-    [p_activity_code] Text(50),
-    [p_detail] LongText,
-    [p_json] LongText,
-    [p_username] Text(64);
+	[p_activity_code] Text(50),
+	[p_detail] LongText,
+	[p_json] LongText,
+	[p_username] Text(64);
 
 INSERT INTO
-    activity_logs
-        (
-            activity_code,
-            detail,
-            [json],
-            username,
-            created_at
-        )
-    VALUES
-        (
-            [p_activity_code],
-            [p_detail],
-            [p_json],
-            [p_username],
-            Now()
-        );
+	activity_logs
+		(
+			activity_code,
+			detail,
+			[json],
+			username,
+			created_at
+		)
+	VALUES
+		(
+			[p_activity_code],
+			[p_detail],
+			[p_json],
+			[p_username],
+			Now()
+		);

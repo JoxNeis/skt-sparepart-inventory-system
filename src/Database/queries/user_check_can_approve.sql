@@ -7,15 +7,19 @@
 -- Replaces: compare_user
 -- =====================================================================
 PARAMETERS
-    [p_requested_by] Text(64),
-    [p_approved_by] Text(64);
+	[p_requested_by] Text(64),
+	[p_approved_by] Text(64);
 
 SELECT
-    IIf(approver.tier > requester.tier, True, False) AS can_approve
+	IIf(
+		approver.tier > requester.tier,
+		True,
+		False
+	) AS can_approve
 FROM
-    users AS requester,
-    users AS approver
+	users AS requester,
+	users AS approver
 WHERE
-    requester.username = [p_requested_by]
-    AND approver.username = [p_approved_by]
-    AND approver.deleted_at IS NULL;
+	requester.username = [p_requested_by]
+	AND approver.username = [p_approved_by]
+	AND approver.deleted_at IS NULL;

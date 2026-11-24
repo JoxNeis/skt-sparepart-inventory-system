@@ -7,16 +7,17 @@
 --          Rows are append-only; never edit or delete an applied row.
 -- =====================================================================
 CREATE TABLE [migrations] (
-    [id]          AUTOINCREMENT,
-    [version]     LONG          NOT NULL,
-    [name]        TEXT(100)     NOT NULL,
-    [applied_by]  TEXT(64),
-    [applied_at]  DATETIME      NOT NULL DEFAULT Now(),
-    CONSTRAINT
-        [pk_migrations]
-            PRIMARY KEY ([id])
+	[id]          AUTOINCREMENT,
+	[version]     LONG       NOT NULL,
+	[name]        TEXT(100)  NOT NULL,
+	[applied_by]  TEXT(64),
+	[applied_at]  DATETIME   NOT NULL DEFAULT Now(),
+
+	CONSTRAINT
+		[pk_migrations]
+			PRIMARY KEY ([id])
 );
 
 CREATE UNIQUE INDEX
-    [uq_migrations_version]
-        ON [migrations] ([version]);
+	[uq_migrations_version]
+		ON [migrations] ([version]);

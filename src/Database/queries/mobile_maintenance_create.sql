@@ -5,22 +5,22 @@
 -- Replaces: create_mobile_post
 -- =====================================================================
 PARAMETERS
-    [p_manufacturing_plant_id] Long,
-    [p_code] Text(40),
-    [p_name] Text(255);
+	[p_manufacturing_plant_id] Long,
+	[p_code] Text(40),
+	[p_name] Text(255);
 
 INSERT INTO
-    mobile_maintenances
-        (
-            manufacturing_plant_id,
-            code,
-            [name],
-            created_at
-        )
-    VALUES
-        (
-            [p_manufacturing_plant_id],
-            [p_code],
-            [p_name],
-            Now()
-        );
+	mobile_maintenances
+		(
+			manufacturing_plant_id,
+			code,
+			[name],
+			created_at
+		)
+	VALUES
+		(
+			[p_manufacturing_plant_id],
+			[p_code],
+			[p_name],
+			Now()
+		);

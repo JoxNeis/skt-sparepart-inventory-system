@@ -4,13 +4,13 @@
 -- Purpose : Hide a vendor from lists. Existing orders keep it.
 -- =====================================================================
 PARAMETERS
-    [p_vendor_id] Long;
+	[p_vendor_id] Long;
 
 UPDATE
-    vendors
+	vendors
 SET
-    deleted_at = Now(),
-    updated_at = Now()
+	deleted_at = Now(),
+	updated_at = Now()
 WHERE
-    id = [p_vendor_id]
-    AND deleted_at IS NULL;
+	id = [p_vendor_id]
+	AND deleted_at IS NULL;

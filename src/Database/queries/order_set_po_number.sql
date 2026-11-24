@@ -7,14 +7,14 @@
 -- Replaces: update_order_po_id
 -- =====================================================================
 PARAMETERS
-    [p_uuid] Text(36),
-    [p_po_number] Text(50);
+	[p_uuid] Text(36),
+	[p_po_number] Text(50);
 
 UPDATE
-    orders AS o
-        INNER JOIN transactions AS t
-            ON t.id = o.transaction_id
+	orders AS o
+		INNER JOIN transactions AS t
+			ON t.id = o.transaction_id
 SET
-    o.po_number = [p_po_number]
+	o.po_number = [p_po_number]
 WHERE
-    t.uuid = [p_uuid];
+	t.uuid = [p_uuid];

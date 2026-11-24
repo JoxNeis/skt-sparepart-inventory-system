@@ -4,13 +4,13 @@
 -- Purpose : Hide a mobile maintenance from lists. Existing requests keep it.
 -- =====================================================================
 PARAMETERS
-    [p_mobile_maintenance_id] Long;
+	[p_mobile_maintenance_id] Long;
 
 UPDATE
-    mobile_maintenances
+	mobile_maintenances
 SET
-    deleted_at = Now(),
-    updated_at = Now()
+	deleted_at = Now(),
+	updated_at = Now()
 WHERE
-    id = [p_mobile_maintenance_id]
-    AND deleted_at IS NULL;
+	id = [p_mobile_maintenance_id]
+	AND deleted_at IS NULL;

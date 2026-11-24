@@ -5,13 +5,13 @@
 --           and requests can no longer use it; history stays intact.
 -- =====================================================================
 PARAMETERS
-    [p_sparepart_id] Long;
+	[p_sparepart_id] Long;
 
 UPDATE
-    spareparts
+	spareparts
 SET
-    deleted_at = Now(),
-    updated_at = Now()
+	deleted_at = Now(),
+	updated_at = Now()
 WHERE
-    id = [p_sparepart_id]
-    AND deleted_at IS NULL;
+	id = [p_sparepart_id]
+	AND deleted_at IS NULL;

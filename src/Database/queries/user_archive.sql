@@ -4,13 +4,13 @@
 -- Purpose : Deactivate a user. Their history stays intact.
 -- =====================================================================
 PARAMETERS
-    [p_user_id] Long;
+	[p_user_id] Long;
 
 UPDATE
-    users
+	users
 SET
-    deleted_at = Now(),
-    updated_at = Now()
+	deleted_at = Now(),
+	updated_at = Now()
 WHERE
-    id = [p_user_id]
-    AND deleted_at IS NULL;
+	id = [p_user_id]
+	AND deleted_at IS NULL;

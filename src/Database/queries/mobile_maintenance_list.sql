@@ -5,16 +5,16 @@
 -- Replaces: select_mobile_post_by_manufacturing_plant_name
 -- =====================================================================
 PARAMETERS
-    [p_manufacturing_plant_id] Long;
+	[p_manufacturing_plant_id] Long;
 
 SELECT
-    mm.id,
-    mm.code,
-    mm.[name]
+	mm.id,
+	mm.code,
+	mm.[name]
 FROM
-    mobile_maintenances AS mm
+	mobile_maintenances AS mm
 WHERE
-    mm.manufacturing_plant_id = [p_manufacturing_plant_id]
-    AND mm.deleted_at IS NULL
+	mm.manufacturing_plant_id = [p_manufacturing_plant_id]
+	AND mm.deleted_at IS NULL
 ORDER BY
-    mm.[name];
+	mm.[name];

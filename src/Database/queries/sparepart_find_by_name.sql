@@ -7,21 +7,26 @@
 --           matched_on: CATALOGUE (code or name) or ALIAS.
 -- =====================================================================
 PARAMETERS
-    [p_name] Text(255);
+	[p_name] Text(255);
 
 SELECT
-    s.id,
-    s.code,
-    s.[name],
-    s.alias,
-    s.unit_of_measurement,
-    IIf(s.[name] = [p_name] OR s.code = [p_name], 'CATALOGUE', 'ALIAS') AS matched_on
+	s.id,
+	s.code,
+	s.[name],
+	s.alias,
+	s.unit_of_measurement,
+	IIf(
+		s.[name] = [p_name]
+		OR s.code = [p_name],
+		'CATALOGUE',
+		'ALIAS'
+	) AS matched_on
 FROM
-    spareparts AS s
+	spareparts AS s
 WHERE
-    (
-        s.[name] = [p_name]
-        OR s.code = [p_name]
-        OR s.alias = [p_name]
-    )
-    AND s.deleted_at IS NULL;
+	(
+		s.[name] = [p_name]
+		OR s.code = [p_name]
+		OR s.alias = [p_name]
+	)
+	AND s.deleted_at IS NULL;
