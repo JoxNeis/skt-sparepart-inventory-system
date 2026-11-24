@@ -49,9 +49,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal mengambil receive.", _
         "TestSelectReceives"
 

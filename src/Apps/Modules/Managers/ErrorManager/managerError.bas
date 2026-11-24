@@ -1,4 +1,4 @@
-Attribute VB_Name = "ErrorManager"
+Attribute VB_Name = "managerError"
 Option Explicit
 
 ' =========================================================
@@ -15,19 +15,19 @@ Option Explicit
 '   module itself (the module name is the namespace):
 '       serviceActivityLog.InsertFailed
 '       serviceOrder.EmptyOrder
-'       DatabaseManager.ConnectionFailed
-'       TableManager.ColumnNotFound
+'       managerDatabase.ConnectionFailed
+'       managerTable.ColumnNotFound
 '
 '   Class modules and worksheet modules cannot hold Public
 '   Const, so their codes are Public Enums in:
-'       ErrorCodesEntities  ->  entitiesOrder.NegativeId
-'       ErrorCodesSheets    ->  sheetInputOrder.EmptyPlantName
+'       managerErrorCodesEntities  ->  entitiesOrder.NegativeId
+'       managerErrorCodesSheets    ->  sheetInputOrder.EmptyPlantName
 '
 ' Raising an error (validation functions return Boolean,
 ' the caller decides to throw):
 '
-'   If ValidationNumeric.IsZeroOrNegative(value) Then
-'       ErrorManager.ThrowError _
+'   If managerValidationNumeric.IsZeroOrNegative(value) Then
+'       managerError.ThrowError _
 '           entitiesOrder.NegativeId, _
 '           CLASS_NAME & ".Id", _
 '           "ID harus lebih besar dari 0."
@@ -36,16 +36,16 @@ Option Explicit
 ' Propagating an error from an error handler:
 '
 '   ErrorHandler:
-'       errInfo = ErrorManager.CaptureError()   ' first line
+'       errInfo = managerError.CaptureError()   ' first line
 '       ' ... cleanup ...
-'       ErrorManager.Rethrow errInfo, _
+'       managerError.Rethrow errInfo, _
 '           MODULE_NAME & ".CreateOrder", _
 '           "Gagal membuat order."
 '
 ' Getting the error (the original code is preserved while
 ' the error travels up through Rethrow):
 '
-'   If ErrorManager.HasErrorCode(errInfo, entitiesOrder.NegativeId) Then
+'   If managerError.HasErrorCode(errInfo, entitiesOrder.NegativeId) Then
 '       ...
 '   End If
 '
@@ -58,11 +58,11 @@ Option Explicit
 ' ERROR CODE RANGES (each owner gets a block of 100)
 '
 '   10000 - 10999  Managers and infrastructure
-'       10000  ErrorManager
-'       10100  DatabaseManager
-'       10200  pHelper
-'       10300  FormManager
-'       10400  TableManager
+'       10000  managerError
+'       10100  managerDatabase
+'       10200  coreHelper
+'       10300  managerForm
+'       10400  managerTable
 '
 '   11000 - 11999  Entities (class modules, blocks of 50)
 '       11000  entitiesManufacturingPlant
@@ -140,11 +140,11 @@ Option Explicit
 '
 ' DAO modules only run one saved query per function, so
 ' they normally raise nothing themselves: connection,
-' command and field errors come from DatabaseManager, and
+' command and field errors come from managerDatabase, and
 ' validation / row-count errors come from the services.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "ErrorManager"
+Private Const MODULE_NAME As String = "managerError"
 
 Public Const APP_ERROR_FIRST As Long = 10000
 Public Const APP_ERROR_LAST As Long = 19999
@@ -308,7 +308,7 @@ Public Sub ShowError( _
     Dim message As String
 
     If Len(title) = 0 Then
-        title = "Aplikasi " & pConfig.ApplicationName() & _
+        title = "Aplikasi " & coreConfig.ApplicationName() & _
                 " Mengalami Error!"
     End If
 

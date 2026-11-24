@@ -13,9 +13,9 @@ Private Const MODULE_NAME As String = "SERVICE_TRANSACTION"
 
 ' =========================================================
 ' ERROR CODES (17900 - 17999)
-' Usage: ErrorManager.ThrowError serviceTransaction.InvalidTransactionType, ...
+' Usage: managerError.ThrowError serviceTransaction.InvalidTransactionType, ...
 ' =========================================================
-Public Const InvalidTransactionType As Long = 17901         ' not ORDER / REQUEST / RECEIVE
+Public Const InvalidTransactionType As Long = 17901         ' not ORDER / REQUEST / RECEIVE / MAINTENANCE
 Public Const EmptyGeneratedUUID As Long = 17902             ' select_uuid returned no row / blank
 Public Const NoRowAffectedCreateTransaction As Long = 17903 ' 0 rows inserted
 Public Const EmptyTransactionCreator As Long = 17904        ' current user is blank
@@ -53,17 +53,17 @@ Public Function CreateTransaction( _
     ' =====================================================
     transactionCode = GetTransactionCode(transactionType)
 
-    If ValidationText.IsBlank(transactionCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionCode) Then
+        managerError.ThrowError _
             serviceTransaction.InvalidTransactionType, _
             MODULE_NAME & ".CreateTransaction", _
-            "Transaction type harus ORDER, RECEIVE, atau REQUEST."
+            "Transaction type harus ORDER, RECEIVE, REQUEST, atau MAINTENANCE."
     End If
 
-    createdBy = Trim$(pConfig.currentUser())
+    createdBy = Trim$(coreConfig.currentUser())
 
-    If ValidationText.IsBlank(createdBy) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(createdBy) Then
+        managerError.ThrowError _
             serviceTransaction.EmptyTransactionCreator, _
             MODULE_NAME & ".CreateTransaction", _
             "User pembuat transaction tidak dapat ditentukan."
@@ -75,8 +75,8 @@ Public Function CreateTransaction( _
     transactionUUID = daoTransaction.SelectUUID( _
         conn, transactionCode, transactionDate)
 
-    If ValidationText.IsBlank(transactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
             serviceTransaction.EmptyGeneratedUUID, _
             MODULE_NAME & ".CreateTransaction", _
             "UUID gagal dibuat karena query tidak menghasilkan data."
@@ -94,8 +94,8 @@ Public Function CreateTransaction( _
     affected = daoTransaction.CreateTransaction( _
         conn, transactionUUID, transactionType, createdBy, activeAt)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceTransaction.NoRowAffectedCreateTransaction, _
             MODULE_NAME & ".CreateTransaction", _
             "Transaction tidak tersimpan karena 0 baris terpengaruh."
@@ -106,9 +106,9 @@ Public Function CreateTransaction( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateTransaction", _
         "Gagal membuat transaction."
 
@@ -128,8 +128,8 @@ Public Sub ReverseTransaction( _
 
     originalTransactionUUID = Trim$(originalTransactionUUID)
 
-    If ValidationText.IsBlank(originalTransactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(originalTransactionUUID) Then
+        managerError.ThrowError _
             serviceTransaction.EmptyTransactionUUID, _
             MODULE_NAME & ".ReverseTransaction", _
             "UUID transaksi original tidak boleh kosong."
@@ -139,7 +139,7 @@ Public Sub ReverseTransaction( _
         conn, originalTransactionUUID)
 
     If affected <> 1 Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceTransaction.TransactionReversalFailed, _
             MODULE_NAME & ".ReverseTransaction", _
             "Transaksi original tidak berhasil dibalik. " & _
@@ -149,9 +149,9 @@ Public Sub ReverseTransaction( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ReverseTransaction", _
         "Gagal membalik transaksi original."
 
@@ -171,8 +171,8 @@ Public Sub ActivateTransaction( _
 
     transactionUUID = Trim$(transactionUUID)
 
-    If ValidationText.IsBlank(transactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
             serviceTransaction.EmptyTransactionUUID, _
             MODULE_NAME & ".ActivateTransaction", _
             "UUID transaksi proposed tidak boleh kosong."
@@ -182,7 +182,7 @@ Public Sub ActivateTransaction( _
         conn, transactionUUID)
 
     If affected <> 1 Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceTransaction.TransactionActivationFailed, _
             MODULE_NAME & ".ActivateTransaction", _
             "Transaksi proposed tidak berhasil diaktifkan. " & _
@@ -192,16 +192,17 @@ Public Sub ActivateTransaction( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ActivateTransaction", _
         "Gagal mengaktifkan transaksi proposed."
 
 End Sub
 
 
-' ORDER -> ORD, REQUEST -> WRQ, RECEIVE -> RCV, else "".
+' ORDER -> ORD, REQUEST -> WRQ, RECEIVE -> RCV,
+' MAINTENANCE -> MTW, else "".
 Private Function GetTransactionCode( _
     ByVal transactionType As String) As String
 
@@ -212,6 +213,8 @@ Private Function GetTransactionCode( _
             GetTransactionCode = "WRQ"
         Case "RECEIVE"
             GetTransactionCode = "RCV"
+        Case "MAINTENANCE"
+            GetTransactionCode = "MTW"
         Case Else
             GetTransactionCode = vbNullString
     End Select

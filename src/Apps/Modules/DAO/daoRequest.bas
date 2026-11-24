@@ -23,18 +23,18 @@ Public Function CreateRequest( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_request")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_request")
 
-    DatabaseManager.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_mobile_post_name", requestItem.MobilePost.Name
-    DatabaseManager.AddDateParameter cmd, "p_request_date", requestItem.orderDate
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", requestItem.Catalogue.Name
-    DatabaseManager.AddDoubleParameter cmd, "p_request_amount", requestItem.Amount
-    DatabaseManager.AddLongTextParameter cmd, "p_request_remarks", requestItem.remarks
-    DatabaseManager.AddLongTextParameter cmd, "p_request_system_remarks", requestItem.SystemRemarks
-    DatabaseManager.AddTextParameter cmd, "p_request_person_in_charge", requestItem.personInCharge
+    managerDatabase.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
+    managerDatabase.AddTextParameter cmd, "p_mobile_post_name", requestItem.MobilePost.Name
+    managerDatabase.AddDateParameter cmd, "p_request_date", requestItem.orderDate
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", requestItem.Catalogue.Name
+    managerDatabase.AddDoubleParameter cmd, "p_request_amount", requestItem.Amount
+    managerDatabase.AddLongTextParameter cmd, "p_request_remarks", requestItem.remarks
+    managerDatabase.AddLongTextParameter cmd, "p_request_system_remarks", requestItem.SystemRemarks
+    managerDatabase.AddTextParameter cmd, "p_request_person_in_charge", requestItem.personInCharge
 
-    CreateRequest = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateRequest = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -56,17 +56,17 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
     Dim mobilePostItem As MobilePost
     Dim catalogueItem As Catalogue
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_request_by_manufacturing_plant_name_and_order_date")
 
     ' Access resolves saved-query parameters by position.
     ' Append them in exactly the same order as the
     ' PARAMETERS declaration in the saved query.
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set result = New Collection
 
@@ -76,29 +76,29 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
         Set mobilePostItem = New MobilePost
         Set catalogueItem = New Catalogue
 
-        mobilePostItem.Name = DatabaseManager.FieldText(rs, "mobile_post_name")
+        mobilePostItem.Name = managerDatabase.FieldText(rs, "mobile_post_name")
 
-        catalogueItem.Name = DatabaseManager.FieldText(rs, "catalogue_name")
-        catalogueItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
+        catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
+        catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
 
         With requestItem
-            .UUID = DatabaseManager.FieldText(rs, "request_uuid")
+            .UUID = managerDatabase.FieldText(rs, "request_uuid")
 
             Set .MobilePost = mobilePostItem
             Set .Catalogue = catalogueItem
 
-            If Not DatabaseManager.FieldIsNull(rs, "request_date") Then
-                .orderDate = DatabaseManager.FieldDate(rs, "request_date")
+            If Not managerDatabase.FieldIsNull(rs, "request_date") Then
+                .orderDate = managerDatabase.FieldDate(rs, "request_date")
             End If
 
-            If Not DatabaseManager.FieldIsNull(rs, "request_amount") Then
-                .Amount = DatabaseManager.FieldDouble(rs, "request_amount")
+            If Not managerDatabase.FieldIsNull(rs, "request_amount") Then
+                .Amount = managerDatabase.FieldDouble(rs, "request_amount")
             End If
 
-            .unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
-            .remarks = DatabaseManager.FieldText(rs, "request_remarks")
-            .SystemRemarks = DatabaseManager.FieldText(rs, "request_system_remarks")
-            .personInCharge = DatabaseManager.FieldText(rs, "request_person_in_charge")
+            .unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
+            .remarks = managerDatabase.FieldText(rs, "request_remarks")
+            .SystemRemarks = managerDatabase.FieldText(rs, "request_system_remarks")
+            .personInCharge = managerDatabase.FieldText(rs, "request_person_in_charge")
         End With
 
         result.Add requestItem
@@ -110,7 +110,7 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set GetRequestsByManufacturingPlantAndOrderDate = result
 

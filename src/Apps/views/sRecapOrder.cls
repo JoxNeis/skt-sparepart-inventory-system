@@ -41,13 +41,13 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     '=====================================================
     'Date input cells
     '=====================================================
-    If FormManager.IsInRange( _
+    If managerForm.IsInRange( _
         Target, _
         Me.Range(CELL_FROM_DATE & ":" & CELL_UNTIL_DATE)) Then
 
         Application.EnableEvents = False
 
-        FormManager.ShowDatePicker Target
+        managerForm.ShowDatePicker Target
 
         GoTo CleanUp
 
@@ -56,16 +56,16 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     '=====================================================
     'Get the order recap table
     '=====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     '=====================================================
     'UPDATE column clicked
     '=====================================================
-    If TableManager.IsInColumn( _
+    If managerTable.IsInColumn( _
         Target, _
         tbl, _
         COLUMN_UPDATE) Then
@@ -73,7 +73,7 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
         Application.EnableEvents = False
 
         selectedRowIndex = _
-            TableManager.GetRowIndex(tbl, Target)
+            managerTable.GetRowIndex(tbl, Target)
 
         UpdateOrderPOID _
             tbl:=tbl, _
@@ -91,9 +91,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 
@@ -114,9 +114,9 @@ Private Sub UpdateOrderPOID( _
     '=====================================================
     'Validate selected row
     '=====================================================
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.InvalidSelectedRow, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "Baris order yang dipilih tidak valid."
@@ -126,12 +126,12 @@ Private Sub UpdateOrderPOID( _
     '=====================================================
     'Get order UUID
     '=====================================================
-    orderUUID = TableManager.GetText( _
+    orderUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UUID)
 
-    If ValidationText.IsBlank(orderUUID) Then
+    If managerValidationText.IsBlank(orderUUID) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.EmptyOrderUUID, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "UUID order tidak ditemukan."
@@ -141,12 +141,12 @@ Private Sub UpdateOrderPOID( _
     '=====================================================
     'Get the new PO ID
     '=====================================================
-    orderPOID = TableManager.GetText( _
+    orderPOID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PO_ID)
 
-    If ValidationText.IsBlank(orderPOID) Then
+    If managerValidationText.IsBlank(orderPOID) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.EmptyPoId, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "PO ID order tidak boleh kosong."
@@ -156,7 +156,7 @@ Private Sub UpdateOrderPOID( _
     '=====================================================
     'Show confirmation dialog
     '=====================================================
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         "Apakah Anda yakin ingin memperbarui " & _
         "PO ID order berikut?" & _
         vbCrLf & vbCrLf & _
@@ -178,7 +178,7 @@ Private Sub UpdateOrderPOID( _
     '=====================================================
     'Show success message
     '=====================================================
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         "PO ID berhasil diperbarui." & _
         vbCrLf & vbCrLf & _
         "UUID: " & orderUUID & _
@@ -189,9 +189,9 @@ Private Sub UpdateOrderPOID( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".UpdateOrderPOID"
 
 End Sub
@@ -217,29 +217,29 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 1: Read and validate filter values
     '=====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
+    If managerValidationText.IsBlank(plantName) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.EmptyPlantName, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Lokasi belum dipilih."
 
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_FROM_DATE) Then
+    If Not managerForm.IsCellDate(Me, CELL_FROM_DATE) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.InvalidFromDate, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Dari tidak valid."
 
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_UNTIL_DATE) Then
+    If Not managerForm.IsCellDate(Me, CELL_UNTIL_DATE) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.InvalidUntilDate, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Hingga tidak valid."
@@ -247,16 +247,16 @@ Public Sub SearchOrder_Click()
     End If
 
     fromDateValue = CDate( _
-        FormManager.GetCellValue(Me, CELL_FROM_DATE) _
+        managerForm.GetCellValue(Me, CELL_FROM_DATE) _
     )
 
     untilDateValue = CDate( _
-        FormManager.GetCellValue(Me, CELL_UNTIL_DATE) _
+        managerForm.GetCellValue(Me, CELL_UNTIL_DATE) _
     )
 
     If fromDateValue > untilDateValue Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.InvalidDateRange, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Dari tidak boleh lebih besar " & _
@@ -267,7 +267,7 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 2: Get the order recap table
     '=====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     '=====================================================
     'Step 3: Select orders
@@ -279,7 +279,7 @@ Public Sub SearchOrder_Click()
 
     If orders Is Nothing Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapOrder.EmptyOrderCollection, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Hasil pencarian order tidak dapat dibaca."
@@ -289,7 +289,7 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 4: Clear existing table rows
     '=====================================================
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
     '=====================================================
     'Step 5: Fill the table
@@ -300,42 +300,42 @@ Public Sub SearchOrder_Click()
 
         rowNumber = rowNumber + 1
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, rowNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UUID, orderItem.UUID
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PO_ID, orderItem.poID
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CATALOGUE, orderItem.Catalogue.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_AMOUNT, orderItem.Amount
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UOM, orderItem.Catalogue.unitOfMeasurement
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_VENDOR, orderItem.Vendor.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_ORDER_DATE, orderItem.orderDate
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_STATUS, orderItem.Status
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REMARKS, orderItem.remarks
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PIC, orderItem.personInCharge
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UPDATE, "UPDATE"
 
     Next orderItem
@@ -353,9 +353,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 
@@ -370,26 +370,26 @@ Private Sub ApplyOrderTableFormat( _
 
     Dim errInfo As ErrorInfo
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     '=====================================================
     'Order date format
     '=====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ORDER_DATE, "dd-mmm-yyyy"
 
     '=====================================================
     'Order amount format
     '=====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_AMOUNT, "#,##0.00"
 
     '=====================================================
     'UPDATE column format
     '=====================================================
-    Set updateRange = TableManager.GetColumnRange( _
+    Set updateRange = managerTable.GetColumnRange( _
         tbl, COLUMN_UPDATE)
 
     If Not updateRange Is Nothing Then
@@ -413,11 +413,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set updateRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyOrderTableFormat"
 
 End Sub

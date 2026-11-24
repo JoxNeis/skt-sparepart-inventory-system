@@ -21,13 +21,13 @@ Public Function SelectOrderRequestUpdate( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_order_request_update")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_order_request_update")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set SelectOrderRequestUpdate = DatabaseManager.ExecuteRecordset(cmd)
+    Set SelectOrderRequestUpdate = managerDatabase.ExecuteRecordset(cmd)
 
 End Function
 
@@ -42,11 +42,11 @@ Public Function UpdateOrderReceives( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_receive_order_id")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_receive_order_id")
 
-    DatabaseManager.AddTextParameter cmd, "p_old_order_uuid", oldOrderUUID
-    DatabaseManager.AddTextParameter cmd, "p_new_order_uuid", newOrderUUID
+    managerDatabase.AddTextParameter cmd, "p_old_order_uuid", oldOrderUUID
+    managerDatabase.AddTextParameter cmd, "p_new_order_uuid", newOrderUUID
 
-    UpdateOrderReceives = DatabaseManager.ExecuteNonQuery(cmd)
+    UpdateOrderReceives = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

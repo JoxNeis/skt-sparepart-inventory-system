@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetInputPenerimaan (ErrorCodesSheets.bas)
+' Error codes: sheetInputPenerimaan (managerErrorCodesSheets.bas)
 
 Private Const MODULE_NAME As String = "SHEET_INPUT_RECEIVE"
 
@@ -34,7 +34,7 @@ Private Const COLUMN_OK_AMOUNT As String = "Jumlah OK"
 Private Const COLUMN_NOT_OK_AMOUNT As String = "Jumlah NOT OK"
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-    FormManager.HandleDatePickerSelection Target, Me.Range("B7:B8")
+    managerForm.HandleDatePickerSelection Target, Me.Range("B7:B8")
 End Sub
 
 Public Sub SearchReceive_Click()
@@ -56,9 +56,9 @@ Public Sub SearchReceive_Click()
     ' =====================================================
     ' Step 1: Read filter values
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
-    fromDateValue = CDate(FormManager.GetCellValue(Me, CELL_FROM_DATE))
-    untilDateValue = CDate(FormManager.GetCellValue(Me, CELL_UNTIL_DATE))
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
+    fromDateValue = CDate(managerForm.GetCellValue(Me, CELL_FROM_DATE))
+    untilDateValue = CDate(managerForm.GetCellValue(Me, CELL_UNTIL_DATE))
 
     ' =====================================================
     ' Step 2: Call the select function
@@ -71,9 +71,9 @@ Public Sub SearchReceive_Click()
     ' =====================================================
     ' Step 3: Clear the existing table rows
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
     ' =====================================================
     ' Step 4: Fill the table with the result
@@ -84,15 +84,15 @@ Public Sub SearchReceive_Click()
 
         rowNumber = rowNumber + 1
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
-        TableManager.SetValue tbl, rowIndex, COLUMN_NO, rowNumber
-        TableManager.SetValue tbl, rowIndex, COLUMN_UUID, receiveItem.Order.UUID
-        TableManager.SetValue tbl, rowIndex, COLUMN_PO_ID, receiveItem.Order.poID
-        TableManager.SetValue tbl, rowIndex, COLUMN_CATALOGUE, receiveItem.Order.Catalogue.Name
-        TableManager.SetValue tbl, rowIndex, COLUMN_AMOUNT, receiveItem.RemainingOrder
-        TableManager.SetValue tbl, rowIndex, COLUMN_UOM, receiveItem.Order.Catalogue.unitOfMeasurement
-        TableManager.SetValue tbl, rowIndex, COLUMN_ORDER_DATE, receiveItem.Order.orderDate
+        managerTable.SetValue tbl, rowIndex, COLUMN_NO, rowNumber
+        managerTable.SetValue tbl, rowIndex, COLUMN_UUID, receiveItem.Order.UUID
+        managerTable.SetValue tbl, rowIndex, COLUMN_PO_ID, receiveItem.Order.poID
+        managerTable.SetValue tbl, rowIndex, COLUMN_CATALOGUE, receiveItem.Order.Catalogue.Name
+        managerTable.SetValue tbl, rowIndex, COLUMN_AMOUNT, receiveItem.RemainingOrder
+        managerTable.SetValue tbl, rowIndex, COLUMN_UOM, receiveItem.Order.Catalogue.unitOfMeasurement
+        managerTable.SetValue tbl, rowIndex, COLUMN_ORDER_DATE, receiveItem.Order.orderDate
 
     Next receiveItem
 
@@ -103,9 +103,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 
@@ -139,10 +139,10 @@ Public Sub SaveReceive_Click()
     ' =====================================================
     ' Step 1: Read manufacturing plant name
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(plantName) Then
+        managerError.ThrowError _
             sheetInputPenerimaan.EmptyPlantName, _
             MODULE_NAME & ".SaveReceive_Click", _
             "Nama manufacturing plant tidak boleh kosong."
@@ -151,10 +151,10 @@ Public Sub SaveReceive_Click()
     ' =====================================================
     ' Step 2: Get input table
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
-        FormManager.ShowWarning "Tidak ada baris data untuk disimpan."
+    If Not managerTable.HasRows(tbl) Then
+        managerForm.ShowWarning "Tidak ada baris data untuk disimpan."
 
         GoTo CleanUp
     End If
@@ -166,29 +166,29 @@ Public Sub SaveReceive_Click()
     ' =====================================================
     ' Step 3: Process each table row
     ' =====================================================
-    For rowIndex = 1 To TableManager.RowCount(tbl)
+    For rowIndex = 1 To managerTable.RowCount(tbl)
 
         currentRowIndex = rowIndex
 
-        orderUuidValue = TableManager.GetText( _
+        orderUuidValue = managerTable.GetText( _
             tbl, rowIndex, COLUMN_UUID)
 
-        orderPoIdValue = TableManager.GetText( _
+        orderPoIdValue = managerTable.GetText( _
             tbl, rowIndex, COLUMN_PO_ID)
 
-        catalogueName = TableManager.GetText( _
+        catalogueName = managerTable.GetText( _
             tbl, rowIndex, COLUMN_CATALOGUE)
 
-        arrivalDateValue = TableManager.GetValue( _
+        arrivalDateValue = managerTable.GetValue( _
             tbl, rowIndex, COLUMN_ARRIVAL_DATE)
 
-        verificationDateValue = TableManager.GetValue( _
+        verificationDateValue = managerTable.GetValue( _
             tbl, rowIndex, COLUMN_VERIFICATION_DATE)
 
         ' =================================================
         ' Skip rows without a PO ID
         ' =================================================
-        If ValidationText.IsBlank(orderPoIdValue) Then
+        If managerValidationText.IsBlank(orderPoIdValue) Then
             skippedCount = skippedCount + 1
             GoTo ContinueLoop
         End If
@@ -196,8 +196,8 @@ Public Sub SaveReceive_Click()
         ' =================================================
         ' Validate order UUID
         ' =================================================
-        If ValidationText.IsBlank(orderUuidValue) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(orderUuidValue) Then
+            managerError.ThrowError _
                 sheetInputPenerimaan.EmptyOrderUUID, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "ORDER UUID tidak boleh kosong."
@@ -206,8 +206,8 @@ Public Sub SaveReceive_Click()
         ' =================================================
         ' Validate catalogue name
         ' =================================================
-        If ValidationText.IsBlank(catalogueName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(catalogueName) Then
+            managerError.ThrowError _
                 sheetInputPenerimaan.EmptyCatalogueName, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Nama barang atau catalogue tidak boleh kosong."
@@ -222,7 +222,7 @@ Public Sub SaveReceive_Click()
         End If
 
         If Not IsDate(arrivalDateValue) Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetInputPenerimaan.InvalidArrivalDate, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Tanggal datang tidak valid."
@@ -230,7 +230,7 @@ Public Sub SaveReceive_Click()
 
         If Not IsEmpty(verificationDateValue) Then
             If Not IsDate(verificationDateValue) Then
-                ErrorManager.ThrowError _
+                managerError.ThrowError _
                     sheetInputPenerimaan.InvalidVerificationDate, _
                     MODULE_NAME & ".SaveReceive_Click", _
                     "Tanggal verifikasi tidak valid."
@@ -255,7 +255,7 @@ Public Sub SaveReceive_Click()
 
         Set orderItem = New Order
         orderItem.UUID = orderUuidValue
-        orderItem.Amount = TableManager.GetDouble( _
+        orderItem.Amount = managerTable.GetDouble( _
             tbl, rowIndex, COLUMN_TOTAL_RECEIVE)
 
         Set orderItem.Plant = plantItem
@@ -268,50 +268,50 @@ Public Sub SaveReceive_Click()
 
         Set receiveItem.Order = orderItem
 
-        receiveItem.ArrivalDate = TableManager.GetDate( _
+        receiveItem.ArrivalDate = managerTable.GetDate( _
             tbl, rowIndex, COLUMN_ARRIVAL_DATE)
 
         If Not IsEmpty(verificationDateValue) Then
-            receiveItem.VerificationDate = TableManager.GetDate( _
+            receiveItem.VerificationDate = managerTable.GetDate( _
                 tbl, rowIndex, COLUMN_VERIFICATION_DATE)
         End If
 
-        receiveItem.totalReceiveAmount = TableManager.GetDouble( _
+        receiveItem.totalReceiveAmount = managerTable.GetDouble( _
             tbl, rowIndex, COLUMN_TOTAL_RECEIVE)
 
-        receiveItem.okAmount = TableManager.GetDouble( _
+        receiveItem.okAmount = managerTable.GetDouble( _
             tbl, rowIndex, COLUMN_OK_AMOUNT)
 
-        receiveItem.notOKAmount = TableManager.GetDouble( _
+        receiveItem.notOKAmount = managerTable.GetDouble( _
             tbl, rowIndex, COLUMN_NOT_OK_AMOUNT)
 
-        receiveItem.remarks = TableManager.GetText( _
+        receiveItem.remarks = managerTable.GetText( _
             tbl, rowIndex, COLUMN_REMARKS)
 
-        receiveItem.personInCharge = TableManager.GetText( _
+        receiveItem.personInCharge = managerTable.GetText( _
             tbl, rowIndex, COLUMN_PIC)
 
         ' =================================================
         ' Step 7: Validate receive amounts
         ' =================================================
-        If ValidationNumeric.IsZeroOrNegative( _
+        If managerValidationNumeric.IsZeroOrNegative( _
             receiveItem.totalReceiveAmount) Then
 
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetInputPenerimaan.InvalidTotalReceiveAmount, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Jumlah diterima harus lebih besar dari nol."
         End If
 
-        If ValidationNumeric.IsNegative(receiveItem.okAmount) Then
-            ErrorManager.ThrowError _
+        If managerValidationNumeric.IsNegative(receiveItem.okAmount) Then
+            managerError.ThrowError _
                 sheetInputPenerimaan.NegativeOkAmount, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Jumlah OK tidak boleh kurang dari nol."
         End If
 
-        If ValidationNumeric.IsNegative(receiveItem.notOKAmount) Then
-            ErrorManager.ThrowError _
+        If managerValidationNumeric.IsNegative(receiveItem.notOKAmount) Then
+            managerError.ThrowError _
                 sheetInputPenerimaan.NegativeNotOkAmount, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Jumlah NOT OK tidak boleh kurang dari nol."
@@ -321,7 +321,7 @@ Public Sub SaveReceive_Click()
             receiveItem.notOKAmount <> _
             receiveItem.totalReceiveAmount Then
 
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetInputPenerimaan.InvalidOkNotOkSum, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Jumlah OK ditambah jumlah NOT OK harus " & _
@@ -342,8 +342,8 @@ Public Sub SaveReceive_Click()
                     "#,##0.00")
         End If
 
-        If ValidationText.IsBlank(receiveItem.personInCharge) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(receiveItem.personInCharge) Then
+            managerError.ThrowError _
                 sheetInputPenerimaan.EmptyPersonInCharge, _
                 MODULE_NAME & ".SaveReceive_Click", _
                 "Person in charge tidak boleh kosong."
@@ -372,7 +372,7 @@ ContinueLoop:
     ' =====================================================
     ' Step 9: Show result
     ' =====================================================
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         savedCount & _
         " penerimaan berhasil disimpan." & _
         vbCrLf & _
@@ -384,7 +384,7 @@ ContinueLoop:
     ' =====================================================
     ' Step 10: Clear table after successful process
     ' =====================================================
-    TableManager.ClearContents tbl
+    managerTable.ClearContents tbl
 
 CleanUp:
     Set receiveItem = Nothing
@@ -397,9 +397,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Baris ke-" & currentRowIndex & " pada tabel."
 
     Resume CleanUp

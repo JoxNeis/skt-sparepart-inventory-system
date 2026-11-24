@@ -22,7 +22,7 @@ Private Const COLUMN_PIC As String = "PIC"
 Private Const CLASS_NAME As String = "Worksheet_INPUT_ORDER"
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-    FormManager.HandleDatePickerSelection Target, Me.Range("B6")
+    managerForm.HandleDatePickerSelection Target, Me.Range("B6")
 End Sub
 
 Private Sub Worksheet_Activate()
@@ -59,13 +59,13 @@ Public Sub SaveOrder_Click()
     ' =====================================================
     ' Step 1: Read header values (Plant + Order Date)
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
-    orderDateValue = CDate(FormManager.GetCellValue(Me, CELL_ORDER_DATE))
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
+    orderDateValue = CDate(managerForm.GetCellValue(Me, CELL_ORDER_DATE))
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
-        FormManager.ShowWarning "Tidak ada baris data untuk disimpan."
+    If Not managerTable.HasRows(tbl) Then
+        managerForm.ShowWarning "Tidak ada baris data untuk disimpan."
         Exit Sub
     End If
 
@@ -74,23 +74,23 @@ Public Sub SaveOrder_Click()
     ' =====================================================
     savedCount = 0
 
-    For rowIndex = 1 To TableManager.RowCount(tbl)
+    For rowIndex = 1 To managerTable.RowCount(tbl)
 
         currentRowIndex = rowIndex
 
-        catalogueName = TableManager.GetText( _
+        catalogueName = managerTable.GetText( _
             tbl, rowIndex, COLUMN_CATALOGUE)
 
-        amountValue = TableManager.GetDouble( _
+        amountValue = managerTable.GetDouble( _
             tbl, rowIndex, COLUMN_AMOUNT)
 
-        vendorName = TableManager.GetText( _
+        vendorName = managerTable.GetText( _
             tbl, rowIndex, COLUMN_VENDOR)
 
-        remarksValue = TableManager.GetText( _
+        remarksValue = managerTable.GetText( _
             tbl, rowIndex, COLUMN_REMARKS)
 
-        picValue = TableManager.GetText( _
+        picValue = managerTable.GetText( _
             tbl, rowIndex, COLUMN_PIC)
 
         Set plantItem = New Plant
@@ -122,9 +122,9 @@ Public Sub SaveOrder_Click()
 
     Next rowIndex
 
-    FormManager.ShowInfo savedCount & " order berhasil disimpan."
+    managerForm.ShowInfo savedCount & " order berhasil disimpan."
     
-    TableManager.ClearContents tbl
+    managerTable.ClearContents tbl
 
 CleanUp:
     Set tbl = Nothing
@@ -135,7 +135,7 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
     Set orderItem = Nothing
@@ -143,7 +143,7 @@ ErrorHandler:
     Set catalogueItem = Nothing
     Set vendorItem = Nothing
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Baris ke-" & currentRowIndex & " pada tabel."
 
 End Sub
@@ -155,19 +155,19 @@ Public Sub AddOrderRow_Click()
     Dim tbl As ListObject
     Dim errInfo As ErrorInfo
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
-    TableManager.AddRow tbl
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
+    managerTable.AddRow tbl
 
     Set tbl = Nothing
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -178,19 +178,19 @@ Public Sub ClearEmptyOrderRows()
     Dim tbl As ListObject
     Dim errInfo As ErrorInfo
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    TableManager.DeleteEmptyRows tbl
+    managerTable.DeleteEmptyRows tbl
 
     Set tbl = Nothing
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub

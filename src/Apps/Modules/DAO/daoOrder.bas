@@ -22,18 +22,18 @@ Public Function CreateOrder( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_order")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_order")
 
-    DatabaseManager.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
-    DatabaseManager.AddDateParameter cmd, "p_order_date", orderItem.orderDate
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", orderItem.Catalogue.Name
-    DatabaseManager.AddDoubleParameter cmd, "p_amount", orderItem.Amount
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_name", orderItem.Plant.Name
-    DatabaseManager.AddTextParameter cmd, "p_vendor_name", orderItem.Vendor.Name
-    DatabaseManager.AddTextParameter cmd, "p_remarks", orderItem.remarks
-    DatabaseManager.AddTextParameter cmd, "person_in_charge", orderItem.personInCharge
+    managerDatabase.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
+    managerDatabase.AddDateParameter cmd, "p_order_date", orderItem.orderDate
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", orderItem.Catalogue.Name
+    managerDatabase.AddDoubleParameter cmd, "p_amount", orderItem.Amount
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_name", orderItem.Plant.Name
+    managerDatabase.AddTextParameter cmd, "p_vendor_name", orderItem.Vendor.Name
+    managerDatabase.AddTextParameter cmd, "p_remarks", orderItem.remarks
+    managerDatabase.AddTextParameter cmd, "person_in_charge", orderItem.personInCharge
 
-    CreateOrder = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateOrder = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -51,14 +51,14 @@ Public Function SelectOrder( _
     Dim orders As Collection
     Dim orderItem As Order
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_order_receive_by_manufacturing_plant_name_and_order_date")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set orders = New Collection
 
@@ -75,7 +75,7 @@ Public Function SelectOrder( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectOrder = orders
 
@@ -95,14 +95,14 @@ Public Function SelectPendingOrder( _
     Dim orders As Collection
     Dim orderItem As Order
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_pending_order_by_manufacturing_plant_name_and_order_date")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set orders = New Collection
 
@@ -119,7 +119,7 @@ Public Function SelectPendingOrder( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectPendingOrder = orders
 
@@ -135,12 +135,12 @@ Public Function UpdateOrderPOID( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_order_po_id")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_order_po_id")
 
-    DatabaseManager.AddTextParameter cmd, "p_order_uuid", orderUUID
-    DatabaseManager.AddTextParameter cmd, "p_order_po_id", poID
+    managerDatabase.AddTextParameter cmd, "p_order_uuid", orderUUID
+    managerDatabase.AddTextParameter cmd, "p_order_po_id", poID
 
-    UpdateOrderPOID = DatabaseManager.ExecuteNonQuery(cmd)
+    UpdateOrderPOID = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -166,27 +166,27 @@ Private Function MapOrderRow( _
     Set vendorItem = New Vendor
     Set orderItem = New Order
 
-    plantItem.Name = DatabaseManager.FieldText(rs, "manufacturing_plant_name")
-    catalogueItem.Name = DatabaseManager.FieldText(rs, "catalogue_name")
-    catalogueItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
-    vendorItem.Name = DatabaseManager.FieldText(rs, "vendor_name")
+    plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
+    catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
+    catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
+    vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
 
-    orderItem.Id = DatabaseManager.FieldLong(rs, "order_id")
-    orderItem.UUID = DatabaseManager.FieldText(rs, "order_uuid")
+    orderItem.Id = managerDatabase.FieldLong(rs, "order_id")
+    orderItem.UUID = managerDatabase.FieldText(rs, "order_uuid")
 
-    poIdValue = DatabaseManager.FieldText(rs, "order_poid")
+    poIdValue = managerDatabase.FieldText(rs, "order_poid")
     If Len(poIdValue) > 0 Then
         orderItem.poID = poIdValue
     End If
 
     Set orderItem.Plant = plantItem
-    orderItem.orderDate = DatabaseManager.FieldDate(rs, "order_date")
+    orderItem.orderDate = managerDatabase.FieldDate(rs, "order_date")
     Set orderItem.Catalogue = catalogueItem
-    orderItem.Amount = DatabaseManager.FieldDouble(rs, "order_amount")
-    orderItem.Status = DatabaseManager.FieldText(rs, "order_status")
+    orderItem.Amount = managerDatabase.FieldDouble(rs, "order_amount")
+    orderItem.Status = managerDatabase.FieldText(rs, "order_status")
     Set orderItem.Vendor = vendorItem
-    orderItem.remarks = DatabaseManager.FieldText(rs, "order_remarks")
-    orderItem.personInCharge = DatabaseManager.FieldText(rs, "order_person_in_charge")
+    orderItem.remarks = managerDatabase.FieldText(rs, "order_remarks")
+    orderItem.personInCharge = managerDatabase.FieldText(rs, "order_person_in_charge")
 
     Set MapOrderRow = orderItem
 

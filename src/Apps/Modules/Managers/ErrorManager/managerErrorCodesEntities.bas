@@ -1,4 +1,4 @@
-Attribute VB_Name = "ErrorCodesEntities"
+Attribute VB_Name = "managerErrorCodesEntities"
 Option Explicit
 
 ' =========================================================
@@ -8,7 +8,7 @@ Option Explicit
 ' for each entity live here as a Public Enum.
 '
 ' Usage:
-'   ErrorManager.ThrowError entitiesOrder.NegativeId, ...
+'   managerError.ThrowError entitiesOrder.NegativeId, ...
 '   If errInfo.Number = entitiesOrder.NegativeId Then ...
 '
 ' Always qualify the member with the enum name, because the
@@ -135,7 +135,7 @@ Public Enum entitiesTransaction
     NegativeId = 11351              ' Id <= 0
     EmptyUUID = 11352
     UUIDTooLong = 11353             ' > 36
-    InvalidTransactionType = 11354  ' not ORDER / RECEIVE / REQUEST
+    InvalidTransactionType = 11354  ' not ORDER / RECEIVE / REQUEST / MAINTENANCE
     EmptyManufacturingPlant = 11355
     EmptyCreatedBy = 11356
     CreatedByTooLong = 11357        ' > 64
@@ -236,8 +236,8 @@ End Enum
 ' ---------------------------------------------------------
 Public Enum entitiesMaintenanceWork
     NegativeId = 11601              ' Id <= 0
-    EmptyUUID = 11602
-    UUIDTooLong = 11603             ' > 36
+    EmptyTransaction = 11602
+    WrongTransactionType = 11603    ' header is not MAINTENANCE
     EmptyMaintenanceName = 11604
     MaintenanceNameTooLong = 11605  ' > 255
     EmptyMaintenanceDate = 11606

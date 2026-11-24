@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetMasterDataMobilePost (ErrorCodesSheets.bas)
+' Error codes: sheetMasterDataMobilePost (managerErrorCodesSheets.bas)
 
 Private Const MODULE_NAME As String = _
     "SHEET_MASTER_MOBILE_POST"
@@ -45,18 +45,18 @@ Public Sub SaveMobilePost_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy()
+    state = managerForm.BeginBusy()
 
     ' =====================================================
     ' Step 1: Read input values
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_MANUFACTURING_PLANT)
 
-    mobilePostName = FormManager.GetCellText( _
+    mobilePostName = managerForm.GetCellText( _
         Me, CELL_MOBILE_POST_NAME)
 
-    mobilePostCode = FormManager.GetCellText( _
+    mobilePostCode = managerForm.GetCellText( _
         Me, CELL_MOBILE_POST_CODE)
 
     ' =====================================================
@@ -100,7 +100,7 @@ Public Sub SaveMobilePost_Click()
         "Kode mobile post: " & _
         mobilePostItem.Code
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Simpan Mobile Post") Then
 
@@ -110,7 +110,7 @@ Public Sub SaveMobilePost_Click()
     ' =====================================================
     ' Step 6: Set processing status
     ' =====================================================
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Menyimpan mobile post baru...", True
 
     ' =====================================================
@@ -119,7 +119,7 @@ Public Sub SaveMobilePost_Click()
     serviceMobilePost.CreateMobilePost _
         mobilePostItem:=mobilePostItem
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 8: Build success message
@@ -142,7 +142,7 @@ Public Sub SaveMobilePost_Click()
         "Kode mobile post: " & _
         mobilePostItem.Code
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Penyimpanan Mobile Post Berhasil"
 
@@ -165,7 +165,7 @@ Public Sub SaveMobilePost_Click()
     RefreshMobilePosts_Click
 
 CleanUp:
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set mobilePostItem = Nothing
     Set plantItem = Nothing
@@ -173,14 +173,14 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set mobilePostItem = Nothing
     Set plantItem = Nothing
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menyimpan mobile post baru."
 
 End Sub
@@ -198,7 +198,7 @@ Private Sub ClearMobilePostInput()
 
     Dim errInfo As ErrorInfo
 
-    FormManager.ClearCells Me, _
+    managerForm.ClearCells Me, _
         CELL_MOBILE_POST_NAME, _
         CELL_MOBILE_POST_CODE
 
@@ -209,9 +209,9 @@ Private Sub ClearMobilePostInput()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearMobilePostInput"
 
 End Sub
@@ -239,17 +239,17 @@ Public Sub RefreshMobilePosts_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data mobile post...")
 
     ' =====================================================
     ' Step 1: Read manufacturing plant from B3
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_MANUFACTURING_PLANT)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetMasterDataMobilePost.EmptyManufacturingPlantName, _
             MODULE_NAME & ".RefreshMobilePosts_Click", _
             "Lokasi manufacturing plant " & _
@@ -259,7 +259,7 @@ Public Sub RefreshMobilePosts_Click()
     ' =====================================================
     ' Step 2: Get and validate TableMobilePosts
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateMobilePostTableColumns tbl
 
@@ -273,7 +273,7 @@ Public Sub RefreshMobilePosts_Click()
                 manufacturingPlantName)
 
     If mobilePosts Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataMobilePost.NullMobilePostCollection, _
             MODULE_NAME & ".RefreshMobilePosts_Click", _
             "DAO tidak mengembalikan collection " & _
@@ -297,7 +297,7 @@ Public Sub RefreshMobilePosts_Click()
         rowNumber = rowNumber + 1
 
         If mobilePostItem Is Nothing Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetMasterDataMobilePost.NullMobilePostInCollection, _
                 MODULE_NAME & ".RefreshMobilePosts_Click", _
                 "Objek MobilePost pada indeks " & _
@@ -308,8 +308,8 @@ Public Sub RefreshMobilePosts_Click()
         mobilePostName = TrimText( _
             mobilePostItem.Name)
 
-        If ValidationText.IsBlank(mobilePostName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(mobilePostName) Then
+            managerError.ThrowError _
                 sheetMasterDataMobilePost.EmptyMobilePostNameInCollection, _
                 MODULE_NAME & ".RefreshMobilePosts_Click", _
                 "Nama mobile post pada indeks " & _
@@ -317,9 +317,9 @@ Public Sub RefreshMobilePosts_Click()
                 " tidak boleh kosong."
         End If
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NAME, mobilePostName
 
     Next mobilePostItem
@@ -329,14 +329,14 @@ Public Sub RefreshMobilePosts_Click()
     ' =====================================================
     ApplyMobilePostTableFormatting tbl
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 7: Show result
     ' =====================================================
     If mobilePostCount = 0 Then
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada mobile post untuk " & _
             "manufacturing plant '" & _
             manufacturingPlantName & "'.", _
@@ -344,7 +344,7 @@ Public Sub RefreshMobilePosts_Click()
 
     Else
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(mobilePostCount) & _
             " data mobile post berhasil ditampilkan.", _
             "Master Data Mobile Post"
@@ -356,20 +356,20 @@ CleanUp:
     Set mobilePosts = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set mobilePostItem = Nothing
     Set mobilePosts = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan master data mobile post."
 
 End Sub
@@ -386,21 +386,21 @@ Private Sub ClearMobilePostTable( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ClearMobilePostTable", _
             "TableMobilePosts belum diinisialisasi."
     End If
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearMobilePostTable", _
         "Gagal membersihkan data mobile post lama."
 
@@ -418,23 +418,23 @@ Private Sub ValidateMobilePostTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ValidateMobilePostTableColumns", _
             "TableMobilePosts tidak ditemukan " & _
             "pada worksheet ini."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_NAME)
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateMobilePostTableColumns", _
         "Struktur TableMobilePosts tidak sesuai."
 
@@ -454,26 +454,26 @@ Private Sub ApplyMobilePostTableFormatting( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ApplyMobilePostTableFormatting", _
             "TableMobilePosts belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     ' TableMobilePosts has a single column (Nama), so the
     ' column range is the whole table body.
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_NAME)
 
     If Not columnRange Is Nothing Then
         columnRange.VerticalAlignment = xlCenter
     End If
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_NAME, "@", xlLeft
 
 CleanUp:
@@ -481,11 +481,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyMobilePostTableFormatting", _
         "Gagal menerapkan format " & _
         "TableMobilePosts."

@@ -1,14 +1,18 @@
 -- =====================================================================
 -- Table  : transactions
--- Purpose: Header shared by every document (ORDER, RECEIVE, REQUEST).
---          Each header has exactly one detail row in orders, receives
---          or requests (1:1 through the detail's unique transaction_id).
+-- Purpose: Header shared by every document (ORDER, RECEIVE, REQUEST,
+--          MAINTENANCE). Each header has exactly one detail row in
+--          orders, receives, requests or maintenance_works: one-to-one
+--          relations on the detail's unique transaction_id, added
+--          through DAO (see $OneToOneRelations in
+--          migration\generate_migration_vba.ps1).
 -- Life   : draft    -> activated_at IS NULL
 --          active   -> activated_at set, reversed_at IS NULL
 --          reversed -> reversed_at set
 --          A transaction is never edited or deleted. An edit is a new
 --          proposed transaction (see transaction_update_requests).
--- Notes  : [uuid] is the document number, e.g. ORD-20261124-001, made
+-- Notes  : [uuid] is the document number <PLANT>-<PREFIX>-<yyyymmdd>-<nnn>,
+--          e.g. SBY01-ORD-20261124-001, made
 --          by transaction_get_next_uuid (it is not an RFC 4122 UUID).
 --          [manufacturing_plant_id] sits on the header so that every
 --          document type is filtered by plant in the same way.
@@ -53,7 +57,7 @@ CREATE TABLE [transactions] (
 	CONSTRAINT
 		[ck_transactions_type]
 			CHECK (
-				[transaction_type] IN ('ORDER', 'RECEIVE', 'REQUEST')
+				[transaction_type] IN ('ORDER', 'RECEIVE', 'REQUEST', 'MAINTENANCE')
 			)
 );
 

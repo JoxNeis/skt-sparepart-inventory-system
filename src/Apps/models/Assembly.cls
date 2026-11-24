@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - ASSEMBLY
 ' Table      : assemblies
-' Error codes: entitiesAssembly (ErrorCodesEntities.bas)
+' Error codes: entitiesAssembly (managerErrorCodesEntities.bas)
 '
 ' Bill of materials: links a parent sparepart to one child
 ' sparepart it is assembled from. A sparepart cannot be its
@@ -36,8 +36,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesAssembly.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -58,7 +58,7 @@ End Property
 Public Property Set Parent(ByVal value As Sparepart)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesAssembly.EmptyParent, _
             CLASS_NAME & ".Parent", _
             CLASS_NAME & ": Sparepart induk tidak boleh kosong."
@@ -81,7 +81,7 @@ End Property
 Public Property Set Child(ByVal value As Sparepart)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesAssembly.EmptyChild, _
             CLASS_NAME & ".Child", _
             CLASS_NAME & ": Sparepart komponen tidak boleh kosong."
@@ -135,11 +135,11 @@ Private Sub CheckNotSelf( _
     ElseIf parentItem.Id > 0 And childItem.Id > 0 Then
         isSame = (parentItem.Id = childItem.Id)
     ElseIf Len(parentItem.Code) > 0 And Len(childItem.Code) > 0 Then
-        isSame = ValidationText.IsSameText(parentItem.Code, childItem.Code)
+        isSame = managerValidationText.IsSameText(parentItem.Code, childItem.Code)
     End If
 
     If isSame Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesAssembly.ParentIsChild, _
             CLASS_NAME & "." & propertyName, _
             CLASS_NAME & _

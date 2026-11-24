@@ -5,7 +5,7 @@ Private Const MODULE_NAME As String = "TRANSACTION_TEST"
 
 ' =========================================================
 ' ERROR CODES (16500 - 16599)
-' Usage: ErrorManager.ThrowError testDaoTransaction.TransactionRollbackFailed, ...
+' Usage: managerError.ThrowError testDaoTransaction.TransactionRollbackFailed, ...
 ' =========================================================
 Public Const EmptyCreatedTransactionUUID As Long = 16501        ' CreateTransaction returned no UUID
 Public Const NotFoundTransactionBeforeRollback As Long = 16502  ' inserted row not visible before rollback
@@ -22,11 +22,11 @@ Public Sub TestCreateTransactionRollback()
     Dim transactionStarted As Boolean
     Dim errInfo As ErrorInfo
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     If conn.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.ConnectionNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.ConnectionNotOpen, _
             MODULE_NAME & ".TestCreateTransactionRollback", _
             "Database connection is not open."
     End If
@@ -38,7 +38,7 @@ Public Sub TestCreateTransactionRollback()
     '==========================================================
     ' Begin transaction
     '==========================================================
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     transactionStarted = True
 
     '==========================================================
@@ -52,8 +52,8 @@ Public Sub TestCreateTransactionRollback()
 
     Debug.Print "Generated UUID: " & UUID
 
-    If ValidationText.IsBlank(UUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(UUID) Then
+        managerError.ThrowError _
             testDaoTransaction.EmptyCreatedTransactionUUID, _
             MODULE_NAME & ".TestCreateTransactionRollback", _
             "FAILED: CreateTransaction returned an empty UUID."
@@ -69,7 +69,7 @@ Public Sub TestCreateTransactionRollback()
     Debug.Print "Exists before rollback: " & existsBeforeRollback
 
     If Not existsBeforeRollback Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             testDaoTransaction.NotFoundTransactionBeforeRollback, _
             MODULE_NAME & ".TestCreateTransactionRollback", _
             "FAILED: The transaction was not found before rollback."
@@ -78,7 +78,7 @@ Public Sub TestCreateTransactionRollback()
     '==========================================================
     ' Roll back deliberately
     '==========================================================
-    DatabaseManager.RollbackTransaction conn
+    managerDatabase.RollbackTransaction conn
     transactionStarted = False
 
     '==========================================================
@@ -91,7 +91,7 @@ Public Sub TestCreateTransactionRollback()
     Debug.Print "Exists after rollback: " & existsAfterRollback
 
     If existsAfterRollback Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             testDaoTransaction.TransactionRollbackFailed, _
             MODULE_NAME & ".TestCreateTransactionRollback", _
             "FAILED: The transaction still exists after rollback."
@@ -101,16 +101,16 @@ Public Sub TestCreateTransactionRollback()
     Debug.Print String$(60, "=")
 
 CleanUp:
-    ' The shared connection stays open (DatabaseManager owns it).
+    ' The shared connection stays open (managerDatabase owns it).
     If transactionStarted Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
     Set conn = Nothing
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Debug.Print "RESULT: FAILED"
     Debug.Print "Error number: " & errInfo.Number
@@ -119,12 +119,12 @@ ErrorHandler:
     Debug.Print String$(60, "=")
 
     If transactionStarted Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
     Set conn = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".TestCreateTransactionRollback"
 
 End Sub
@@ -142,37 +142,37 @@ Private Function TransactionExists( _
     TransactionExists = False
 
     ' Plain SQL text (not a saved query), so switch the
-    ' command type after DatabaseManager created it.
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    ' command type after managerDatabase created it.
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "SELECT COUNT(*) AS row_count " & _
         "FROM transactions " & _
         "WHERE uuid = ?;")
 
     cmd.CommandType = adCmdText
 
-    DatabaseManager.AddTextParameter cmd, "p_uuid", UUID
+    managerDatabase.AddTextParameter cmd, "p_uuid", UUID
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     If Not rs.EOF Then
-        If Not DatabaseManager.FieldIsNull(rs, "row_count") Then
+        If Not managerDatabase.FieldIsNull(rs, "row_count") Then
             TransactionExists = _
-                (DatabaseManager.FieldLong(rs, "row_count") > 0)
+                (managerDatabase.FieldLong(rs, "row_count") > 0)
         End If
     End If
 
 CleanUp:
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
     Set cmd = Nothing
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
     Set cmd = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".TransactionExists"
 
 End Function

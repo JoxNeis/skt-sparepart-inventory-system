@@ -59,12 +59,12 @@ Private Sub Worksheet_SelectionChange( _
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.CaptureState()
+    state = managerForm.CaptureState()
 
     ' =====================================================
     ' Date input cells
     ' =====================================================
-    If FormManager.IsInRange( _
+    If managerForm.IsInRange( _
         Target, _
         Me.Range( _
             CELL_FROM_DATE & ":" & CELL_UNTIL_DATE _
@@ -72,7 +72,7 @@ Private Sub Worksheet_SelectionChange( _
 
         Application.EnableEvents = False
 
-        FormManager.ShowDatePicker Target
+        managerForm.ShowDatePicker Target
 
         GoTo CleanUp
     End If
@@ -80,21 +80,21 @@ Private Sub Worksheet_SelectionChange( _
     ' =====================================================
     ' Get the receive recap table
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     ' =====================================================
     ' UPDATE column clicked
     ' =====================================================
-    If TableManager.IsInColumn( _
+    If managerTable.IsInColumn( _
         Target, _
         tbl, _
         COLUMN_UPDATE) Then
 
-        If Not ValidationText.IsSameText( _
+        If Not managerValidationText.IsSameText( _
             TrimText(CStr(Target.value)), _
             "UPDATE") Then
 
@@ -104,7 +104,7 @@ Private Sub Worksheet_SelectionChange( _
         Application.EnableEvents = False
 
         selectedRowIndex = _
-            TableManager.GetRowIndex(tbl, Target)
+            managerTable.GetRowIndex(tbl, Target)
 
         CreateReceiveUpdateRequest _
             tbl:=tbl, _
@@ -116,18 +116,18 @@ Private Sub Worksheet_SelectionChange( _
 CleanUp:
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -157,50 +157,50 @@ Public Sub SearchReceive_Click()
     ' =====================================================
     ' Step 1: Read and validate filter values
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(plantName) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyPlantName, _
             MODULE_NAME & ".SearchReceive_Click", _
             "Lokasi belum dipilih."
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_FROM_DATE) Then
-        ErrorManager.ThrowError _
+    If Not managerForm.IsCellDate(Me, CELL_FROM_DATE) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidFromDate, _
             MODULE_NAME & ".SearchReceive_Click", _
             "Tanggal awal tidak valid."
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_UNTIL_DATE) Then
-        ErrorManager.ThrowError _
+    If Not managerForm.IsCellDate(Me, CELL_UNTIL_DATE) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidUntilDate, _
             MODULE_NAME & ".SearchReceive_Click", _
             "Tanggal akhir tidak valid."
     End If
 
     fromDateValue = DateValue( _
-        FormManager.GetCellValue(Me, CELL_FROM_DATE))
+        managerForm.GetCellValue(Me, CELL_FROM_DATE))
 
     untilDateValue = DateValue( _
-        FormManager.GetCellValue(Me, CELL_UNTIL_DATE))
+        managerForm.GetCellValue(Me, CELL_UNTIL_DATE))
 
     If fromDateValue > untilDateValue Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidDateRange, _
             MODULE_NAME & ".SearchReceive_Click", _
             "Tanggal awal tidak boleh lebih besar " & _
             "dari tanggal akhir."
     End If
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data penerimaan...")
 
     ' =====================================================
     ' Step 2: Get and validate receive table
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateReceiveTableColumns tbl
 
@@ -213,7 +213,7 @@ Public Sub SearchReceive_Click()
         untilDate:=untilDateValue)
 
     If receives Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyReceiveCollection, _
             MODULE_NAME & ".SearchReceive_Click", _
             "Hasil pencarian penerimaan tidak " & _
@@ -223,7 +223,7 @@ Public Sub SearchReceive_Click()
     ' =====================================================
     ' Step 4: Clear existing table rows
     ' =====================================================
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
     ' =====================================================
     ' Step 5: Fill table with search results
@@ -234,83 +234,83 @@ Public Sub SearchReceive_Click()
 
         rowNumber = rowNumber + 1
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         ' No
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, rowNumber
 
         ' Order UUID
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_ORDER_UUID, _
             receiveItem.Order.UUID
 
         ' Receive UUID
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_RECEIVE_UUID, _
             receiveItem.UUID
 
         ' PO ID
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PO_ID, _
             receiveItem.Order.poID
 
         ' Catalogue
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CATALOGUE, _
             receiveItem.Order.Catalogue.Name
 
         ' Arrival date
         If receiveItem.ArrivalDate > 0 Then
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_ARRIVAL_DATE, _
                 receiveItem.ArrivalDate
         End If
 
         ' Verification date
         If receiveItem.VerificationDate > 0 Then
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_VERIFICATION_DATE, _
                 receiveItem.VerificationDate
         End If
 
         ' Unit of measurement
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UOM, _
             receiveItem.unitOfMeasurement
 
         ' Remaining order
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_ORDER_AMOUNT, _
             receiveItem.RemainingOrder
 
         ' Total receive
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_RECEIVE_AMOUNT, _
             receiveItem.totalReceiveAmount
 
         ' OK amount
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_OK_AMOUNT, _
             receiveItem.okAmount
 
         ' NOT OK amount
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NOT_OK_AMOUNT, _
             receiveItem.notOKAmount
 
         ' Remarks
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REMARKS, _
             receiveItem.remarks
 
         ' PIC
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PIC, _
             receiveItem.personInCharge
 
         ' Update action
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UPDATE, "UPDATE"
 
     Next receiveItem
@@ -324,10 +324,10 @@ Public Sub SearchReceive_Click()
     ' Step 7: Show result
     ' =====================================================
     If rowNumber = 0 Then
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data penerimaan yang ditemukan."
     Else
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(rowNumber) & _
             " data penerimaan ditemukan."
     End If
@@ -337,20 +337,20 @@ CleanUp:
     Set receiveItem = Nothing
     Set receives = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
     Set receiveItem = Nothing
     Set receives = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -400,21 +400,21 @@ Private Sub CreateReceiveUpdateRequest( _
     ' Step 1: Validate selected row
     ' =====================================================
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyReceiveTable, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Tabel penerimaan belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
-        ErrorManager.ThrowError _
+    If Not managerTable.HasRows(tbl) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyReceiveTableRows, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Tabel penerimaan tidak memiliki data."
     End If
 
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
-        ErrorManager.ThrowError _
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidSelectedRow, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Baris penerimaan yang dipilih tidak valid."
@@ -423,22 +423,22 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 2: Read UUID values
     ' =====================================================
-    originalUUID = TableManager.GetText( _
+    originalUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_RECEIVE_UUID)
 
-    orderTransactionUUID = TableManager.GetText( _
+    orderTransactionUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_ORDER_UUID)
 
-    If ValidationText.IsBlank(originalUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(originalUUID) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyOriginalReceiveUUID, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "UUID transaksi receive original " & _
             "tidak ditemukan."
     End If
 
-    If ValidationText.IsBlank(orderTransactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(orderTransactionUUID) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyOrderTransactionUUID, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "UUID transaksi order tidak ditemukan."
@@ -447,10 +447,10 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 3: Read manufacturing plant
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(plantName) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyUpdatePlantName, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Lokasi manufacturing plant " & _
@@ -460,37 +460,37 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 4: Read text values
     ' =====================================================
-    catalogueName = TableManager.GetText( _
+    catalogueName = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_CATALOGUE)
 
-    unitOfMeasurement = TableManager.GetText( _
+    unitOfMeasurement = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UOM)
 
-    poID = TableManager.GetText( _
+    poID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PO_ID)
 
-    remarks = TableManager.GetText( _
+    remarks = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_REMARKS)
 
-    personInCharge = TableManager.GetText( _
+    personInCharge = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PIC)
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyCatalogueName, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Nama barang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(unitOfMeasurement) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(unitOfMeasurement) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyUnitOfMeasurement, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Satuan barang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(personInCharge) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(personInCharge) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyPersonInCharge, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "PIC penerimaan tidak boleh kosong."
@@ -499,48 +499,48 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 5: Validate arrival date
     ' =====================================================
-    arrivalDateValue = TableManager.GetValue( _
+    arrivalDateValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_ARRIVAL_DATE)
 
-    If ValidationText.IsBlank(arrivalDateValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(arrivalDateValue) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyArrivalDate, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Tanggal datang tidak boleh kosong."
     End If
 
     If Not IsDate(arrivalDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidArrivalDate, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Tanggal datang tidak valid."
     End If
 
-    parsedArrivalDate = TableManager.GetDate( _
+    parsedArrivalDate = managerTable.GetDate( _
         tbl, selectedRowIndex, COLUMN_ARRIVAL_DATE)
 
     ' =====================================================
     ' Step 6: Validate verification date
     ' =====================================================
-    verificationDateValue = TableManager.GetValue( _
+    verificationDateValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_VERIFICATION_DATE)
 
-    If ValidationText.IsNotBlank(verificationDateValue) Then
+    If managerValidationText.IsNotBlank(verificationDateValue) Then
 
         If Not IsDate(verificationDateValue) Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetRecapPenerimaan.InvalidVerificationDate, _
                 MODULE_NAME & ".CreateReceiveUpdateRequest", _
                 "Tanggal verifikasi tidak valid."
         End If
 
-        parsedVerificationDate = TableManager.GetDate( _
+        parsedVerificationDate = managerTable.GetDate( _
             tbl, selectedRowIndex, COLUMN_VERIFICATION_DATE)
 
         If DateValue(parsedVerificationDate) < _
            DateValue(parsedArrivalDate) Then
 
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetRecapPenerimaan.VerificationBeforeArrival, _
                 MODULE_NAME & ".CreateReceiveUpdateRequest", _
                 "Tanggal verifikasi tidak boleh " & _
@@ -575,37 +575,37 @@ Private Sub CreateReceiveUpdateRequest( _
         emptyErrorCode:=sheetRecapPenerimaan.EmptyNotOkAmount, _
         invalidErrorCode:=sheetRecapPenerimaan.InvalidNotOkAmount
 
-    totalReceiveAmount = TableManager.GetDouble( _
+    totalReceiveAmount = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_RECEIVE_AMOUNT)
 
-    okAmount = TableManager.GetDouble( _
+    okAmount = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_OK_AMOUNT)
 
-    notOKAmount = TableManager.GetDouble( _
+    notOKAmount = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_NOT_OK_AMOUNT)
 
-    If ValidationNumeric.IsZeroOrNegative(totalReceiveAmount) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(totalReceiveAmount) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.ZeroOrNegativeReceiveAmount, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Jumlah diterima harus lebih besar dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(okAmount) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(okAmount) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.NegativeOkAmount, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Jumlah OK tidak boleh kurang dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(notOKAmount) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(notOKAmount) Then
+        managerError.ThrowError _
             sheetRecapPenerimaan.NegativeNotOkAmount, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             "Jumlah NOT OK tidak boleh kurang dari nol."
     End If
 
-    If ValidationNumeric.IsGreaterThan( _
+    If managerValidationNumeric.IsGreaterThan( _
         Abs(totalReceiveAmount - (okAmount + notOKAmount)), _
         0.000001) Then
 
@@ -628,7 +628,7 @@ Private Sub CreateReceiveUpdateRequest( _
             "Jumlah NOT OK: " & _
             Format$(notOKAmount, "#,##0.00")
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.InvalidOkNotOkTotal, _
             MODULE_NAME & ".CreateReceiveUpdateRequest", _
             mismatchMessage
@@ -662,7 +662,7 @@ Private Sub CreateReceiveUpdateRequest( _
 
         Set .Catalogue = proposedCatalogue
         Set .Plant = proposedPlant
-        .Amount = TableManager.GetDouble( _
+        .Amount = managerTable.GetDouble( _
             tbl, selectedRowIndex, COLUMN_ORDER_AMOUNT)
     End With
 
@@ -676,7 +676,7 @@ Private Sub CreateReceiveUpdateRequest( _
 
         .ArrivalDate = parsedArrivalDate
 
-        If ValidationText.IsNotBlank(verificationDateValue) Then
+        If managerValidationText.IsNotBlank(verificationDateValue) Then
             .VerificationDate = parsedVerificationDate
         End If
 
@@ -752,7 +752,7 @@ Private Sub CreateReceiveUpdateRequest( _
         "Transaksi receive proposed akan dibuat dalam " & _
         "kondisi tidak aktif dan menunggu persetujuan."
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Permintaan Update Penerimaan") Then
 
@@ -762,7 +762,7 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 13: Create proposed receive update
     ' =====================================================
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Membuat permintaan update penerimaan...", True
 
     serviceReceive.CreateReceive _
@@ -773,7 +773,7 @@ Private Sub CreateReceiveUpdateRequest( _
     ' =====================================================
     ' Step 14: Show success message
     ' =====================================================
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     successMessage = _
         "Permintaan perubahan penerimaan berhasil dibuat."
@@ -787,7 +787,7 @@ Private Sub CreateReceiveUpdateRequest( _
         vbCrLf & vbCrLf & _
         "Status: Menunggu persetujuan."
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Permintaan Update Berhasil"
 
@@ -797,7 +797,7 @@ Private Sub CreateReceiveUpdateRequest( _
     SearchReceive_Click
 
 CleanUp:
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     Set proposedReceive = Nothing
     Set proposedOrder = Nothing
@@ -807,16 +807,16 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     Set proposedReceive = Nothing
     Set proposedOrder = Nothing
     Set proposedCatalogue = Nothing
     Set proposedPlant = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateReceiveUpdateRequest"
 
 End Sub
@@ -840,13 +840,13 @@ Private Sub ApplyReceiveTableFormat( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.EmptyFormatReceiveTable, _
             MODULE_NAME & ".ApplyReceiveTableFormat", _
             "Objek tabel penerimaan belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
@@ -882,7 +882,7 @@ Private Sub ApplyReceiveTableFormat( _
     ' =====================================================
     For Each columnName In dateColumns
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, CStr(columnName), "dd-mmm-yyyy"
 
     Next columnName
@@ -892,7 +892,7 @@ Private Sub ApplyReceiveTableFormat( _
     ' =====================================================
     For Each columnName In amountColumns
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, CStr(columnName), "#,##0.00"
 
     Next columnName
@@ -902,7 +902,7 @@ Private Sub ApplyReceiveTableFormat( _
     ' =====================================================
     For Each columnName In allColumns
 
-        Set columnRange = TableManager.GetColumnRange( _
+        Set columnRange = managerTable.GetColumnRange( _
             tbl, CStr(columnName))
 
         If Not columnRange Is Nothing Then
@@ -914,7 +914,7 @@ Private Sub ApplyReceiveTableFormat( _
     ' =====================================================
     ' UPDATE column format
     ' =====================================================
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_UPDATE)
 
     If Not columnRange Is Nothing Then
@@ -938,11 +938,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyReceiveTableFormat"
 
 End Sub
@@ -960,13 +960,13 @@ Private Sub ValidateReceiveTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPenerimaan.NotFoundReceiveTable, _
             MODULE_NAME & ".ValidateReceiveTableColumns", _
             "TableRecapReceive tidak ditemukan."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_NO, _
         COLUMN_ORDER_UUID, _
         COLUMN_RECEIVE_UUID, _
@@ -987,9 +987,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateReceiveTableColumns"
 
 End Sub
@@ -1013,19 +1013,19 @@ Private Sub ValidateNumericTableValue( _
 
     Dim errInfo As ErrorInfo
 
-    fieldValue = TableManager.GetValue( _
+    fieldValue = managerTable.GetValue( _
         tbl, selectedRowIndex, columnName)
 
-    If ValidationText.IsBlank(fieldValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(fieldValue) Then
+        managerError.ThrowError _
             emptyErrorCode, _
             MODULE_NAME & ".ValidateNumericTableValue", _
             fieldDescription & _
             " tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsNotNumber(fieldValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNotNumber(fieldValue) Then
+        managerError.ThrowError _
             invalidErrorCode, _
             MODULE_NAME & ".ValidateNumericTableValue", _
             fieldDescription & _
@@ -1036,9 +1036,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateNumericTableValue"
 
 End Sub
@@ -1051,7 +1051,7 @@ End Sub
 Private Function GetVerificationDateMessage( _
     ByVal verificationDateValue As Variant) As String
 
-    If ValidationText.IsNotBlank(verificationDateValue) Then
+    If managerValidationText.IsNotBlank(verificationDateValue) Then
 
         If IsDate(verificationDateValue) Then
             GetVerificationDateMessage = _

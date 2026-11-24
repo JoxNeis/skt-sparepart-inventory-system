@@ -29,25 +29,25 @@ Public Function SelectVendors( _
     Dim vendorCode As String
     Dim vendorCompanyName As String
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_vendors")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_vendors")
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     ' Fields required by the Vendor mapping below.
-    DatabaseManager.ValidateFields rs, Array("name", "code", "company_name")
+    managerDatabase.ValidateFields rs, Array("name", "code", "company_name")
 
     Set vendors = New Collection
 
     Do While Not rs.EOF
 
-        vendorName = DatabaseManager.FieldText(rs, "name")
-        vendorCode = DatabaseManager.FieldText(rs, "code")
-        vendorCompanyName = DatabaseManager.FieldText(rs, "company_name")
+        vendorName = managerDatabase.FieldText(rs, "name")
+        vendorCode = managerDatabase.FieldText(rs, "code")
+        vendorCompanyName = managerDatabase.FieldText(rs, "company_name")
 
         Set vendorItem = New Vendor
 
         With vendorItem
-            .Id = DatabaseManager.FieldLong(rs, "id")
+            .Id = managerDatabase.FieldLong(rs, "id")
             If Len(vendorName) > 0 Then .Name = vendorName
             If Len(vendorCode) > 0 Then .Code = vendorCode
             If Len(vendorCompanyName) > 0 Then .CompanyName = vendorCompanyName
@@ -60,7 +60,7 @@ Public Function SelectVendors( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectVendors = vendors
 
@@ -77,12 +77,12 @@ Public Function CreateVendor( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_vendor")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_vendor")
 
-    DatabaseManager.AddTextParameter cmd, "p_vendor_name", vendorItem.Name
-    DatabaseManager.AddTextParameter cmd, "p_vendor_company_name", vendorItem.CompanyName
-    DatabaseManager.AddTextParameter cmd, "p_vendor_code", vendorItem.Code
+    managerDatabase.AddTextParameter cmd, "p_vendor_name", vendorItem.Name
+    managerDatabase.AddTextParameter cmd, "p_vendor_company_name", vendorItem.CompanyName
+    managerDatabase.AddTextParameter cmd, "p_vendor_code", vendorItem.Code
 
-    CreateVendor = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateVendor = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

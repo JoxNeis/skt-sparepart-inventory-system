@@ -27,15 +27,15 @@ Public Function SelectStockMovement( _
     Dim stockMovements As Collection
     Dim stockMovementItem As StockMovement
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_stock_movement_by_manufacturing_plant_name_and_order_date")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddIntegerParameter cmd, "p_month", movementMonth
-    DatabaseManager.AddLongParameter cmd, "p_year", movementYear
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", catalogueName
+    managerDatabase.AddIntegerParameter cmd, "p_month", movementMonth
+    managerDatabase.AddLongParameter cmd, "p_year", movementYear
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set stockMovements = New Collection
 
@@ -44,15 +44,15 @@ Public Function SelectStockMovement( _
         Set stockMovementItem = New StockMovement
 
         With stockMovementItem
-            .MovementDate = CLng(DatabaseManager.FieldDate(rs, "movement_date"))
-            .IncomingReferenceNumber = DatabaseManager.FieldText(rs, "incoming_reference_number")
-            .IncomingFrom = DatabaseManager.FieldText(rs, "incoming_from")
-            .incomingAmount = DatabaseManager.FieldDouble(rs, "incoming_amount")
-            .OutgoingReferenceNumber = DatabaseManager.FieldText(rs, "outgoing_reference_number")
-            .OutgoingTo = DatabaseManager.FieldText(rs, "outgoing_to")
-            .outgoingAmount = DatabaseManager.FieldDouble(rs, "outgoing_amount")
-            .remarks = DatabaseManager.FieldText(rs, "remarks")
-            .personInCharge = DatabaseManager.FieldText(rs, "person_in_charge")
+            .MovementDate = CLng(managerDatabase.FieldDate(rs, "movement_date"))
+            .IncomingReferenceNumber = managerDatabase.FieldText(rs, "incoming_reference_number")
+            .IncomingFrom = managerDatabase.FieldText(rs, "incoming_from")
+            .incomingAmount = managerDatabase.FieldDouble(rs, "incoming_amount")
+            .OutgoingReferenceNumber = managerDatabase.FieldText(rs, "outgoing_reference_number")
+            .OutgoingTo = managerDatabase.FieldText(rs, "outgoing_to")
+            .outgoingAmount = managerDatabase.FieldDouble(rs, "outgoing_amount")
+            .remarks = managerDatabase.FieldText(rs, "remarks")
+            .personInCharge = managerDatabase.FieldText(rs, "person_in_charge")
         End With
 
         stockMovements.Add item:=stockMovementItem
@@ -62,7 +62,7 @@ Public Function SelectStockMovement( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectStockMovement = stockMovements
 
@@ -80,20 +80,20 @@ Public Function SelectBeginningStock( _
     Dim cmd As ADODB.Command
     Dim rs As ADODB.recordset
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_beginning_stock")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_beginning_stock")
 
-    DatabaseManager.AddDateParameter cmd, "p_date", stockDate
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
+    managerDatabase.AddDateParameter cmd, "p_date", stockDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", catalogueName
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     If rs.EOF Then
         SelectBeginningStock = 0
     Else
-        SelectBeginningStock = DatabaseManager.FieldDouble(rs, "total_stock")
+        SelectBeginningStock = managerDatabase.FieldDouble(rs, "total_stock")
     End If
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
 End Function

@@ -21,12 +21,12 @@ Public Function SelectRequestRequestUpdate( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_request_request_update")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_request_request_update")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set SelectRequestRequestUpdate = DatabaseManager.ExecuteRecordset(cmd)
+    Set SelectRequestRequestUpdate = managerDatabase.ExecuteRecordset(cmd)
 
 End Function

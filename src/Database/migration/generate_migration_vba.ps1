@@ -62,6 +62,21 @@ $CalculatedFields = @{
     )
 }
 
+# One-to-one relations: an Access DDL FOREIGN KEY always gets a
+# non-unique index, so Access treats it as one-to-many even when the
+# column is UNIQUE. These are added through DAO (dbRelationUnique)
+# right after their table instead (see 08_transactions.sql). An older
+# one-to-many relation with the same name is replaced.
+function New-TransactionDetailRelation([string]$table) {
+    @{ Name = "fk_${table}_transaction"; Column = 'transaction_id'; Table = 'transactions'; References = 'id' }
+}
+$OneToOneRelations = @{
+    'orders'            = @( (New-TransactionDetailRelation 'orders') )
+    'receives'          = @( (New-TransactionDetailRelation 'receives') )
+    'requests'          = @( (New-TransactionDetailRelation 'requests') )
+    'maintenance_works' = @( (New-TransactionDetailRelation 'maintenance_works') )
+}
+
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
@@ -211,6 +226,13 @@ foreach ($file in $tableFiles) {
                 $tableProcs.Add("    EnsureCalculatedField `"$tableName`", `"$($cf.Name)`", $($cf.Type), `"$expr`"")
             }
         }
+        if ($OneToOneRelations.ContainsKey($tableName)) {
+            foreach ($rel in $OneToOneRelations[$tableName]) {
+                $tableProcs.Add('')
+                $tableProcs.Add("    ' One-to-one relation (Access DDL can only create one-to-many).")
+                $tableProcs.Add("    EnsureOneToOneRelation `"$($rel.Name)`", `"$($rel.Table)`", `"$($rel.References)`", `"$tableName`", `"$($rel.Column)`"")
+            }
+        }
     }
 
     $tableProcs.Add('End Sub')
@@ -222,11 +244,12 @@ $tablesModule = @(
     "'======================================================================"
     "' Module : migrationTables   (the table injector)"
     "' Purpose: Creates every table of the schema, one procedure per table"
-    "'          file in src\Database\tables. A table, index or calculated"
-    "'          field that already exists is skipped, so this is safe to run"
-    "'          again after a failure. A column that is in the .sql file but"
-    "'          missing from an existing table is added (ALTER TABLE ADD"
-    "'          COLUMN); columns are never changed or dropped."
+    "'          file in src\Database\tables. A table, index, calculated"
+    "'          field or relation that already exists is skipped, so this is"
+    "'          safe to run again after a failure. A column that is in the"
+    "'          .sql file but missing from an existing table is added (ALTER"
+    "'          TABLE ADD COLUMN); columns are never changed or dropped."
+    "'          A one-to-many relation that must be one-to-one is replaced."
     "'          Started by migrationInit.RunMigration."
     $generatedNote
     "'======================================================================"
@@ -236,6 +259,7 @@ $tablesModule = @(
     "' Late bound (no reference to the DAO or ADO library needed)."
     'Private Const DB_TEXT As Long = 10            '' dbText'
     'Private Const DB_REFRESH_CACHE As Long = 8    '' dbRefreshCache'
+    'Private Const DB_RELATION_UNIQUE As Long = 1  '' dbRelationUnique'
     'Private Const adSchemaColumns As Long = 4'
     'Private Const adSchemaIndexes As Long = 12'
     'Private Const adSchemaTables As Long = 20'
@@ -305,6 +329,52 @@ $tablesModule = @(
     '    tdf.Fields.Append fld'
     ''
     '    migrationInit.MigrationLog "  created   calculated field " & tableName & "." & fieldName'
+    'End Sub'
+    ''
+    "' Adds a one-to-one relation through DAO (dbRelationUnique): each"
+    "' tableName.fieldName row has at most one foreignTableName row. A"
+    "' relation with the same name that is not one-to-one (a FOREIGN KEY"
+    "' from an older version) is dropped and created again."
+    'Private Sub EnsureOneToOneRelation(ByVal relationName As String, _'
+    '                                   ByVal tableName As String, ByVal fieldName As String, _'
+    '                                   ByVal foreignTableName As String, ByVal foreignFieldName As String)'
+    '    Dim db As Object       '' DAO.Database'
+    '    Dim rel As Object      '' DAO.Relation'
+    '    Dim fld As Object      '' DAO.Field'
+    '    Dim isOneToMany As Boolean'
+    ''
+    '    migrationInit.SetCurrentObject "relation " & relationName, _'
+    '        tableName & "." & fieldName & " 1:1 " & foreignTableName & "." & foreignFieldName'
+    ''
+    "    ' The tables were created through ADO; make DAO see them."
+    '    DBEngine.Idle DB_REFRESH_CACHE'
+    '    Set db = CurrentDb'
+    '    db.TableDefs.Refresh'
+    '    db.Relations.Refresh'
+    ''
+    '    For Each rel In db.Relations'
+    '        If StrComp(rel.Name, relationName, vbTextCompare) = 0 Then'
+    '            If (rel.Attributes And DB_RELATION_UNIQUE) <> 0 Then'
+    '                migrationInit.MigrationLog "  skipped   relation " & relationName & " (exists)"'
+    '                Exit Sub'
+    '            End If'
+    '            isOneToMany = True'
+    '            Exit For'
+    '        End If'
+    '    Next rel'
+    ''
+    '    If isOneToMany Then'
+    '        db.Relations.Delete relationName'
+    '        migrationInit.MigrationLog "  dropped   relation " & relationName & " (was one-to-many)"'
+    '    End If'
+    ''
+    '    Set rel = db.CreateRelation(relationName, tableName, foreignTableName, DB_RELATION_UNIQUE)'
+    '    Set fld = rel.CreateField(fieldName)'
+    '    fld.ForeignName = foreignFieldName'
+    '    rel.Fields.Append fld'
+    '    db.Relations.Append rel'
+    ''
+    '    migrationInit.MigrationLog "  created   relation " & relationName & " (one-to-one)"'
     'End Sub'
     ''
     'Public Function TableExists(ByVal tableName As String) As Boolean'

@@ -12,7 +12,7 @@ Private Const MODULE_NAME As String = "SERVICE_STOCK_MOVEMENT"
 
 ' =========================================================
 ' ERROR CODES (17800 - 17899)
-' Usage: ErrorManager.ThrowError serviceStockMovement.InvalidMovementMonth, ...
+' Usage: managerError.ThrowError serviceStockMovement.InvalidMovementMonth, ...
 ' =========================================================
 Public Const EmptyManufacturingPlantName As Long = 17801
 Public Const EmptyCatalogueName As Long = 17802
@@ -49,22 +49,22 @@ Public Function SelectStockMovement( _
     RequirePlantName manufacturingPlantName, MODULE_NAME & ".SelectStockMovement"
     RequireCatalogueName catalogueName, MODULE_NAME & ".SelectStockMovement"
 
-    If ValidationNumeric.IsOutOfRange(movementMonth, 1, 12) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsOutOfRange(movementMonth, 1, 12) Then
+        managerError.ThrowError _
             serviceStockMovement.InvalidMovementMonth, _
             MODULE_NAME & ".SelectStockMovement", _
             "Bulan harus berada di antara 1 dan 12."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(movementYear) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(movementYear) Then
+        managerError.ThrowError _
             serviceStockMovement.InvalidMovementYear, _
             MODULE_NAME & ".SelectStockMovement", _
             "Tahun harus lebih besar dari 0."
     End If
 
-    If ValidationNumeric.IsNegative(beginningStock) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(beginningStock) Then
+        managerError.ThrowError _
             serviceStockMovement.NegativeBeginningStock, _
             MODULE_NAME & ".SelectStockMovement", _
             "Stok awal tidak boleh kurang dari 0."
@@ -73,7 +73,7 @@ Public Function SelectStockMovement( _
     ' =====================================================
     ' Step 2: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set stockMovements = daoStockMovement.SelectStockMovement( _
         conn, manufacturingPlantName, catalogueName, _
@@ -101,9 +101,9 @@ Public Function SelectStockMovement( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectStockMovement", _
         "Gagal mengambil data pergerakan stok."
 
@@ -124,8 +124,8 @@ Public Function SelectBeginningStock( _
     manufacturingPlantName = Trim$(manufacturingPlantName)
     catalogueName = Trim$(catalogueName)
 
-    If ValidationNumeric.IsZeroOrNegative(stockDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(stockDate) Then
+        managerError.ThrowError _
             serviceStockMovement.InvalidStockDate, _
             MODULE_NAME & ".SelectBeginningStock", _
             "Tanggal stok tidak valid."
@@ -134,7 +134,7 @@ Public Function SelectBeginningStock( _
     RequirePlantName manufacturingPlantName, MODULE_NAME & ".SelectBeginningStock"
     RequireCatalogueName catalogueName, MODULE_NAME & ".SelectBeginningStock"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     SelectBeginningStock = daoStockMovement.SelectBeginningStock( _
         conn, stockDate, manufacturingPlantName, catalogueName)
@@ -142,9 +142,9 @@ Public Function SelectBeginningStock( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectBeginningStock", _
         "Gagal mengambil data stok awal."
 
@@ -159,8 +159,8 @@ Private Sub RequirePlantName( _
     ByVal manufacturingPlantName As String, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceStockMovement.EmptyManufacturingPlantName, _
             errorSource, _
             "Nama manufacturing plant tidak boleh kosong."
@@ -173,8 +173,8 @@ Private Sub RequireCatalogueName( _
     ByVal catalogueName As String, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             serviceStockMovement.EmptyCatalogueName, _
             errorSource, _
             "Nama catalogue tidak boleh kosong."

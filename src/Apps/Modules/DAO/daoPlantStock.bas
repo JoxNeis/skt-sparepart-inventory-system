@@ -22,13 +22,13 @@ Public Function UpdateCurrentStock( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_current_stock")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_current_stock")
 
-    DatabaseManager.AddDoubleParameter cmd, "p_stock_changes", stockChanges
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDoubleParameter cmd, "p_stock_changes", stockChanges
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", catalogueName
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
 
-    UpdateCurrentStock = DatabaseManager.ExecuteNonQuery(cmd)
+    UpdateCurrentStock = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -44,13 +44,13 @@ Public Function UpdateCurrentStockExact( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_current_stock_exact")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_current_stock_exact")
 
-    DatabaseManager.AddDoubleParameter cmd, "p_new_stock", newStock
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDoubleParameter cmd, "p_new_stock", newStock
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", catalogueName
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
 
-    UpdateCurrentStockExact = DatabaseManager.ExecuteNonQuery(cmd)
+    UpdateCurrentStockExact = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -63,11 +63,11 @@ Public Function SelectManufacturingPlantStocks( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_plant_stocks")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_plant_stocks")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
 
-    Set SelectManufacturingPlantStocks = DatabaseManager.ExecuteRecordset(cmd)
+    Set SelectManufacturingPlantStocks = managerDatabase.ExecuteRecordset(cmd)
 
 End Function
 
@@ -84,14 +84,14 @@ Public Function UpdateROP( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_rop")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_rop")
 
-    DatabaseManager.AddDoubleParameter cmd, "p_average_daily_usage", averageDailyUsage
-    DatabaseManager.AddDoubleParameter cmd, "p_sd_demand", sdDemand
-    DatabaseManager.AddDoubleParameter cmd, "p_lead_time", leadTime
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDoubleParameter cmd, "p_average_daily_usage", averageDailyUsage
+    managerDatabase.AddDoubleParameter cmd, "p_sd_demand", sdDemand
+    managerDatabase.AddDoubleParameter cmd, "p_lead_time", leadTime
+    managerDatabase.AddTextParameter cmd, "p_catalogue_name", catalogueName
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
 
-    UpdateROP = DatabaseManager.ExecuteNonQuery(cmd)
+    UpdateROP = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

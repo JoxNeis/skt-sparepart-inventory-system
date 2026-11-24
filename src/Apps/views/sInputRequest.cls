@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetInputRequest (ErrorCodesSheets.bas)
+' Error codes: sheetInputRequest (managerErrorCodesSheets.bas)
 
 Private Const TABLE_NAME As String = "TableInputRequest"
 
@@ -24,7 +24,7 @@ Private Const COLUMN_PIC As String = "PIC"
 Private Const MODULE_NAME As String = "Worksheet_INPUT_REQUEST"
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-    FormManager.HandleDatePickerSelection Target, Me.Range("B6")
+    managerForm.HandleDatePickerSelection Target, Me.Range("B6")
 End Sub
 
 Private Sub Worksheet_Activate()
@@ -63,31 +63,31 @@ Public Sub SaveRequest_Click()
     ' =====================================================
     ' Step 1: Read header values
     ' =====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(plantName) Then
+        managerError.ThrowError _
             sheetInputRequest.EmptyPlantName, _
             MODULE_NAME & ".SaveRequest_Click", _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_REQUEST_DATE) Then
+    If Not managerForm.IsCellDate(Me, CELL_REQUEST_DATE) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetInputRequest.InvalidRequestDate, _
             MODULE_NAME & ".SaveRequest_Click", _
             "Tanggal request tidak valid."
     End If
 
     requestDateValue = DateValue( _
-        CDate(FormManager.GetCellValue(Me, CELL_REQUEST_DATE)))
+        CDate(managerForm.GetCellValue(Me, CELL_REQUEST_DATE)))
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
 
-        FormManager.ShowWarning "Tidak ada baris data untuk disimpan."
+        managerForm.ShowWarning "Tidak ada baris data untuk disimpan."
 
         GoTo CleanUp
 
@@ -98,28 +98,28 @@ Public Sub SaveRequest_Click()
     ' =====================================================
     savedCount = 0
 
-    For rowIndex = 1 To TableManager.RowCount(tbl)
+    For rowIndex = 1 To managerTable.RowCount(tbl)
 
         currentRowIndex = rowIndex
 
         ' -------------------------------------------------
         ' Skip a completely empty table row
         ' -------------------------------------------------
-        If Not TableManager.IsRowEmpty(tbl, rowIndex) Then
+        If Not managerTable.IsRowEmpty(tbl, rowIndex) Then
 
             ' -------------------------------------------------
             ' Read the current row values
             ' -------------------------------------------------
-            catalogueName = TableManager.GetText( _
+            catalogueName = managerTable.GetText( _
                 tbl, rowIndex, COLUMN_CATALOGUE)
 
-            mobilePostName = TableManager.GetText( _
+            mobilePostName = managerTable.GetText( _
                 tbl, rowIndex, COLUMN_MOBILE_POST)
 
-            remarksValue = TableManager.GetText( _
+            remarksValue = managerTable.GetText( _
                 tbl, rowIndex, COLUMN_REMARKS)
 
-            picValue = TableManager.GetText( _
+            picValue = managerTable.GetText( _
                 tbl, rowIndex, COLUMN_PIC)
 
             ' -------------------------------------------------
@@ -127,47 +127,47 @@ Public Sub SaveRequest_Click()
             ' (blank passes here as 0 and is rejected by the
             ' "lebih besar dari nol" check below, as before)
             ' -------------------------------------------------
-            amountCellValue = TableManager.GetValue( _
+            amountCellValue = managerTable.GetValue( _
                 tbl, rowIndex, COLUMN_AMOUNT)
 
             If Not IsNumeric(amountCellValue) Then
 
-                ErrorManager.ThrowError _
+                managerError.ThrowError _
                     sheetInputRequest.InvalidAmount, _
                     MODULE_NAME & ".SaveRequest_Click", _
                     "Jumlah barang harus berupa angka."
 
             End If
 
-            amountValue = TableManager.GetDouble( _
+            amountValue = managerTable.GetDouble( _
                 tbl, rowIndex, COLUMN_AMOUNT)
 
             ' -------------------------------------------------
             ' Validate the current row
             ' -------------------------------------------------
-            If ValidationText.IsBlank(catalogueName) Then
-                ErrorManager.ThrowError _
+            If managerValidationText.IsBlank(catalogueName) Then
+                managerError.ThrowError _
                     sheetInputRequest.EmptyCatalogueName, _
                     MODULE_NAME & ".SaveRequest_Click", _
                     "Nama barang tidak boleh kosong."
             End If
 
-            If ValidationNumeric.IsZeroOrNegative(amountValue) Then
-                ErrorManager.ThrowError _
+            If managerValidationNumeric.IsZeroOrNegative(amountValue) Then
+                managerError.ThrowError _
                     sheetInputRequest.ZeroOrNegativeAmount, _
                     MODULE_NAME & ".SaveRequest_Click", _
                     "Jumlah barang harus lebih besar dari nol."
             End If
 
-            If ValidationText.IsBlank(mobilePostName) Then
-                ErrorManager.ThrowError _
+            If managerValidationText.IsBlank(mobilePostName) Then
+                managerError.ThrowError _
                     sheetInputRequest.EmptyMobilePostName, _
                     MODULE_NAME & ".SaveRequest_Click", _
                     "Nama mobile post tidak boleh kosong."
             End If
 
-            If ValidationText.IsBlank(picValue) Then
-                ErrorManager.ThrowError _
+            If managerValidationText.IsBlank(picValue) Then
+                managerError.ThrowError _
                     sheetInputRequest.EmptyPersonInCharge, _
                     MODULE_NAME & ".SaveRequest_Click", _
                     "PIC tidak boleh kosong."
@@ -232,25 +232,25 @@ Public Sub SaveRequest_Click()
     ' =====================================================
     If savedCount = 0 Then
 
-        FormManager.ShowWarning _
+        managerForm.ShowWarning _
             "Tidak ada data request yang dapat disimpan."
 
         GoTo CleanUp
 
     End If
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         savedCount & _
         " request berhasil disimpan."
 
     ' =====================================================
     ' Step 4: Clear the table after saving
     ' =====================================================
-    TableManager.ClearContents tbl
+    managerTable.ClearContents tbl
 
     ClearEmptyRequestRows
 
-    TableManager.AddRow tbl
+    managerTable.AddRow tbl
 
     Me.Range(CELL_LOCATION).Select
 
@@ -264,9 +264,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Baris ke-" & currentRowIndex & " pada tabel."
 
     Resume CleanUp
@@ -281,11 +281,11 @@ Public Sub AddRequestRow_Click()
     Dim rowIndex As Long
     Dim errInfo As ErrorInfo
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    rowIndex = TableManager.AddRow(tbl)
+    rowIndex = managerTable.AddRow(tbl)
 
-    TableManager.SelectCell tbl, rowIndex, COLUMN_CATALOGUE
+    managerTable.SelectCell tbl, rowIndex, COLUMN_CATALOGUE
 
 CleanUp:
     Set tbl = Nothing
@@ -293,9 +293,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 
@@ -308,28 +308,28 @@ Public Sub ClearRequestTable_Click()
     Dim tbl As ListObject
     Dim errInfo As ErrorInfo
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
 
-        FormManager.ShowInfo "Tabel input request sudah kosong."
+        managerForm.ShowInfo "Tabel input request sudah kosong."
 
         GoTo CleanUp
 
     End If
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         "Apakah Anda yakin ingin membersihkan " & _
         "seluruh data pada tabel?") Then
 
         GoTo CleanUp
     End If
 
-    TableManager.ClearContents tbl
+    managerTable.ClearContents tbl
 
     ClearEmptyRequestRows
 
-    TableManager.AddRow tbl
+    managerTable.AddRow tbl
 
     Me.Range(CELL_LOCATION).Select
 
@@ -338,9 +338,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 
@@ -353,9 +353,9 @@ Public Sub ClearEmptyRequestRows()
     Dim tbl As ListObject
     Dim errInfo As ErrorInfo
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    TableManager.DeleteEmptyRows tbl
+    managerTable.DeleteEmptyRows tbl
 
 CleanUp:
     Set tbl = Nothing
@@ -363,9 +363,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
     Resume CleanUp
 

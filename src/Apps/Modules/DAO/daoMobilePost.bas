@@ -29,18 +29,18 @@ Public Function SelectMobilePostByManufacturingPlantName( _
     Dim plantItem As Plant
     Dim mobilePostName As String
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_mobile_post_by_manufacturing_plant_name")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set mobilePosts = New Collection
 
     Do While Not rs.EOF
 
-        mobilePostName = DatabaseManager.FieldText(rs, "name")
+        mobilePostName = managerDatabase.FieldText(rs, "name")
 
         Set plantItem = New Plant
         plantItem.Name = manufacturingPlantName
@@ -61,7 +61,7 @@ Public Function SelectMobilePostByManufacturingPlantName( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectMobilePostByManufacturingPlantName = mobilePosts
 
@@ -78,12 +78,12 @@ Public Function CreateMobilePost( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_mobile_post")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_mobile_post")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", mobilePostItem.Plant.Name
-    DatabaseManager.AddTextParameter cmd, "p_mobile_post_name", mobilePostItem.Name
-    DatabaseManager.AddTextParameter cmd, "p_mobile_post_code", mobilePostItem.Code
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", mobilePostItem.Plant.Name
+    managerDatabase.AddTextParameter cmd, "p_mobile_post_name", mobilePostItem.Name
+    managerDatabase.AddTextParameter cmd, "p_mobile_post_code", mobilePostItem.Code
 
-    CreateMobilePost = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateMobilePost = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

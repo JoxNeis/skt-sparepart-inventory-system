@@ -23,9 +23,9 @@ Public Function GetAllCatalogues( _
     Dim catalogues As Collection
     Dim catalogueItem As Catalogue
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_catalogues")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_catalogues")
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set catalogues = New Collection
 
@@ -34,12 +34,12 @@ Public Function GetAllCatalogues( _
         Set catalogueItem = New Catalogue
 
         With catalogueItem
-            .Id = DatabaseManager.FieldLong(rs, "id")
-            .Name = DatabaseManager.FieldText(rs, "name")
-            .Alias = DatabaseManager.FieldText(rs, "alias")
-            .Code = DatabaseManager.FieldText(rs, "code")
-            .Category = DatabaseManager.FieldText(rs, "category")
-            .unitOfMeasurement = DatabaseManager.FieldText(rs, "unit_of_measurement")
+            .Id = managerDatabase.FieldLong(rs, "id")
+            .Name = managerDatabase.FieldText(rs, "name")
+            .Alias = managerDatabase.FieldText(rs, "alias")
+            .Code = managerDatabase.FieldText(rs, "code")
+            .Category = managerDatabase.FieldText(rs, "category")
+            .unitOfMeasurement = managerDatabase.FieldText(rs, "unit_of_measurement")
         End With
 
         catalogues.Add item:=catalogueItem
@@ -49,7 +49,7 @@ Public Function GetAllCatalogues( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set GetAllCatalogues = catalogues
 
@@ -64,14 +64,14 @@ Public Function CreateCatalogue( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_catalogue")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_catalogue")
 
-    DatabaseManager.AddTextParameter cmd, "p_name", catalogueItem.Name
-    DatabaseManager.AddTextParameter cmd, "p_alias", catalogueItem.Alias
-    DatabaseManager.AddTextParameter cmd, "p_code", catalogueItem.Code
-    DatabaseManager.AddTextParameter cmd, "p_category", catalogueItem.Category
-    DatabaseManager.AddTextParameter cmd, "p_unit_of_measurement", catalogueItem.unitOfMeasurement
+    managerDatabase.AddTextParameter cmd, "p_name", catalogueItem.Name
+    managerDatabase.AddTextParameter cmd, "p_alias", catalogueItem.Alias
+    managerDatabase.AddTextParameter cmd, "p_code", catalogueItem.Code
+    managerDatabase.AddTextParameter cmd, "p_category", catalogueItem.Category
+    managerDatabase.AddTextParameter cmd, "p_unit_of_measurement", catalogueItem.unitOfMeasurement
 
-    CreateCatalogue = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateCatalogue = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

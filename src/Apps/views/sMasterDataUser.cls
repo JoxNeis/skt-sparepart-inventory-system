@@ -65,51 +65,51 @@ Public Sub SaveUser_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy()
+    state = managerForm.BeginBusy()
 
     ' =====================================================
     ' Step 1: Read user input
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_USER_PLANT)
 
-    username = FormManager.GetCellText( _
+    username = managerForm.GetCellText( _
         Me, CELL_USER_USERNAME)
 
-    firstName = FormManager.GetCellText( _
+    firstName = managerForm.GetCellText( _
         Me, CELL_USER_FIRST_NAME)
 
-    middleName = FormManager.GetCellText( _
+    middleName = managerForm.GetCellText( _
         Me, CELL_USER_MIDDLE_NAME)
 
-    lastName = FormManager.GetCellText( _
+    lastName = managerForm.GetCellText( _
         Me, CELL_USER_LAST_NAME)
 
-    userPosition = FormManager.GetCellText( _
+    userPosition = managerForm.GetCellText( _
         Me, CELL_USER_POSITION)
 
-    tierValue = FormManager.GetCellValue( _
+    tierValue = managerForm.GetCellValue( _
         Me, CELL_USER_TIER)
 
     ' =====================================================
     ' Step 2: Validate required text inputs
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyPlantName, _
             MODULE_NAME & ".SaveUser_Click", _
             "Lokasi manufacturing plant wajib diisi."
     End If
 
-    If ValidationText.IsBlank(username) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(username) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyUsername, _
             MODULE_NAME & ".SaveUser_Click", _
             "Username PMI wajib diisi."
     End If
 
-    If ValidationText.IsBlank(firstName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(firstName) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyFirstName, _
             MODULE_NAME & ".SaveUser_Click", _
             "Nama depan wajib diisi."
@@ -117,15 +117,15 @@ Public Sub SaveUser_Click()
 
     ' Middle name is optional.
 
-    If ValidationText.IsBlank(lastName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(lastName) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyLastName, _
             MODULE_NAME & ".SaveUser_Click", _
             "Nama belakang wajib diisi."
     End If
 
-    If ValidationText.IsBlank(userPosition) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(userPosition) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyPosition, _
             MODULE_NAME & ".SaveUser_Click", _
             "Posisi user wajib diisi."
@@ -135,29 +135,29 @@ Public Sub SaveUser_Click()
     ' Step 3: Validate tier
     ' =====================================================
     If IsError(tierValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataUser.InvalidTierErrorValue, _
             MODULE_NAME & ".SaveUser_Click", _
             "Tier berisi nilai error."
     End If
 
     ' Null, Empty and text with only spaces.
-    If ValidationText.IsBlank(tierValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(tierValue) Then
+        managerError.ThrowError _
             sheetMasterDataUser.EmptyTier, _
             MODULE_NAME & ".SaveUser_Click", _
             "Tier user wajib diisi."
     End If
 
-    If ValidationNumeric.IsNotNumber(tierValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNotNumber(tierValue) Then
+        managerError.ThrowError _
             sheetMasterDataUser.InvalidTierNumber, _
             MODULE_NAME & ".SaveUser_Click", _
             "Tier user harus berupa angka."
     End If
 
-    If Not ValidationNumeric.IsWholeNumber(CDbl(tierValue)) Then
-        ErrorManager.ThrowError _
+    If Not managerValidationNumeric.IsWholeNumber(CDbl(tierValue)) Then
+        managerError.ThrowError _
             sheetMasterDataUser.InvalidTierWholeNumber, _
             MODULE_NAME & ".SaveUser_Click", _
             "Tier user harus berupa bilangan bulat."
@@ -165,8 +165,8 @@ Public Sub SaveUser_Click()
 
     tier = CLng(tierValue)
 
-    If ValidationNumeric.IsZeroOrNegative(tier) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(tier) Then
+        managerError.ThrowError _
             sheetMasterDataUser.ZeroOrNegativeTier, _
             MODULE_NAME & ".SaveUser_Click", _
             "Tier user harus lebih besar dari nol."
@@ -206,7 +206,7 @@ Public Sub SaveUser_Click()
         vbCrLf & _
         "Tier: " & CStr(tier)
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Simpan User") Then
 
@@ -216,7 +216,7 @@ Public Sub SaveUser_Click()
     ' =====================================================
     ' Step 6: Call service procedure
     ' =====================================================
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Menyimpan user baru...", True
 
     serviceUser.CreateUser _
@@ -228,7 +228,7 @@ Public Sub SaveUser_Click()
         position:=userPosition, _
         tier:=tier
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 7: Show success message
@@ -256,7 +256,7 @@ Public Sub SaveUser_Click()
         vbCrLf & _
         "Tier: " & CStr(tier)
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Penyimpanan User Berhasil"
 
@@ -273,18 +273,18 @@ Public Sub SaveUser_Click()
     RefreshUsers_Click
 
 CleanUp:
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menyimpan user baru."
 
 End Sub
@@ -302,7 +302,7 @@ Private Sub ClearUserInput()
 
     Dim errInfo As ErrorInfo
 
-    FormManager.ClearCells Me, _
+    managerForm.ClearCells Me, _
         CELL_USER_USERNAME, _
         CELL_USER_FIRST_NAME, _
         CELL_USER_MIDDLE_NAME, _
@@ -317,9 +317,9 @@ Private Sub ClearUserInput()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearUserInput"
 
 End Sub
@@ -385,13 +385,13 @@ Public Sub RefreshUsers_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data user...")
 
     ' =====================================================
     ' Step 1: Get and validate TableUsers
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateUserTableColumns tbl
 
@@ -401,15 +401,15 @@ Public Sub RefreshUsers_Click()
     Set rs = serviceUser.SelectUsers()
 
     If rs Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataUser.NullUserRecordset, _
             MODULE_NAME & ".RefreshUsers_Click", _
             "DAO tidak mengembalikan recordset user."
     End If
 
     If rs.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.RecordsetNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.RecordsetNotOpen, _
             MODULE_NAME & ".RefreshUsers_Click", _
             "Recordset user tidak terbuka."
     End If
@@ -417,7 +417,7 @@ Public Sub RefreshUsers_Click()
     ' =====================================================
     ' Step 3: Validate required recordset fields
     ' =====================================================
-    DatabaseManager.ValidateFields rs, Array( _
+    managerDatabase.ValidateFields rs, Array( _
         "id", _
         "first_name", _
         "middle_name", _
@@ -442,15 +442,15 @@ Public Sub RefreshUsers_Click()
         rowNumber = rowNumber + 1
 
         fullName = BuildUserFullName( _
-            firstName:=DatabaseManager.FieldText( _
+            firstName:=managerDatabase.FieldText( _
                 rs, "first_name"), _
-            middleName:=DatabaseManager.FieldText( _
+            middleName:=managerDatabase.FieldText( _
                 rs, "middle_name"), _
-            lastName:=DatabaseManager.FieldText( _
+            lastName:=managerDatabase.FieldText( _
                 rs, "last_name"))
 
-        If ValidationText.IsBlank(fullName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(fullName) Then
+            managerError.ThrowError _
                 sheetMasterDataUser.EmptyUserFullName, _
                 MODULE_NAME & ".RefreshUsers_Click", _
                 "Nama user pada record ke-" & _
@@ -458,7 +458,7 @@ Public Sub RefreshUsers_Click()
                 " tidak boleh kosong."
         End If
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         WriteUserTableRow _
             tbl:=tbl, _
@@ -474,20 +474,20 @@ Public Sub RefreshUsers_Click()
     ' =====================================================
     ApplyUserTableFormatting tbl
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 7: Display result
     ' =====================================================
     If rowNumber = 0 Then
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data user yang ditemukan.", _
             "Master Data User"
 
     Else
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(rowNumber) & _
             " data user berhasil ditampilkan.", _
             "Master Data User"
@@ -495,24 +495,24 @@ Public Sub RefreshUsers_Click()
     End If
 
 CleanUp:
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan master data user."
 
 End Sub
@@ -534,30 +534,30 @@ Private Sub WriteUserTableRow( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".WriteUserTableRow", _
             "TableUsers belum diinisialisasi."
     End If
 
-    If Not TableManager.IsValidRow(tbl, rowIndex) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidRow, _
+    If Not managerTable.IsValidRow(tbl, rowIndex) Then
+        managerError.ThrowError _
+            managerTable.InvalidRow, _
             MODULE_NAME & ".WriteUserTableRow", _
             "Target row user belum diinisialisasi."
     End If
 
     If rs Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyRecordset, _
+        managerError.ThrowError _
+            managerDatabase.EmptyRecordset, _
             MODULE_NAME & ".WriteUserTableRow", _
             "Recordset user belum diinisialisasi."
     End If
 
-    userId = DatabaseManager.FieldLong(rs, "id")
+    userId = managerDatabase.FieldLong(rs, "id")
 
-    If ValidationNumeric.IsZeroOrNegative(userId) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(userId) Then
+        managerError.ThrowError _
             sheetMasterDataUser.InvalidUserId, _
             MODULE_NAME & ".WriteUserTableRow", _
             "ID user tidak valid."
@@ -566,50 +566,50 @@ Private Sub WriteUserTableRow( _
     ' =====================================================
     ' Id
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_ID, userId
 
     ' =====================================================
     ' Nama lengkap
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_FULL_NAME, fullName
 
     ' =====================================================
     ' Username PMI
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_USERNAME, _
-        DatabaseManager.FieldText(rs, "username")
+        managerDatabase.FieldText(rs, "username")
 
     ' =====================================================
     ' Lokasi manufacturing plant
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_PLANT, _
-        DatabaseManager.FieldText(rs, "manufacturing_plant_name")
+        managerDatabase.FieldText(rs, "manufacturing_plant_name")
 
     ' =====================================================
     ' Posisi
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_POSITION, _
-        DatabaseManager.FieldText(rs, "position")
+        managerDatabase.FieldText(rs, "position")
 
     ' =====================================================
     ' Tier
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_TIER, _
-        DatabaseManager.FieldText(rs, "tier")
+        managerDatabase.FieldText(rs, "tier")
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".WriteUserTableRow", _
         "Gagal menulis satu data user ke tabel."
 
@@ -673,21 +673,21 @@ Private Sub ClearUserTable( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ClearUserTable", _
             "TableUsers belum diinisialisasi."
     End If
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearUserTable", _
         "Gagal membersihkan data user sebelumnya."
 
@@ -705,14 +705,14 @@ Private Sub ValidateUserTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ValidateUserTableColumns", _
             "TableUsers tidak ditemukan " & _
             "pada worksheet ini."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_ID, _
         COLUMN_FULL_NAME, _
         COLUMN_USERNAME, _
@@ -724,9 +724,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & _
         ".ValidateUserTableColumns", _
         "Struktur TableUsers tidak sesuai."
@@ -749,13 +749,13 @@ Private Sub ApplyUserTableFormatting( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ApplyUserTableFormatting", _
             "TableUsers belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
@@ -772,7 +772,7 @@ Private Sub ApplyUserTableFormatting( _
 
     For Each columnName In allColumns
 
-        Set columnRange = TableManager.GetColumnRange( _
+        Set columnRange = managerTable.GetColumnRange( _
             tbl, CStr(columnName))
 
         If Not columnRange Is Nothing Then
@@ -784,25 +784,25 @@ Private Sub ApplyUserTableFormatting( _
     ' =====================================================
     ' ID
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ID, "0", xlCenter
 
     ' =====================================================
     ' Text fields
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_FULL_NAME, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_USERNAME, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_PLANT, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_POSITION, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_TIER, "@", xlCenter
 
 CleanUp:
@@ -810,11 +810,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & _
         ".ApplyUserTableFormatting", _
         "Gagal menerapkan format TableUsers."

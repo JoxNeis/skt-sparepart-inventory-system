@@ -56,13 +56,13 @@ Public Sub RefreshVendors_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data vendor...")
 
     ' =====================================================
     ' Step 1: Get and validate TableVendors
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateVendorTableColumns tbl
 
@@ -72,7 +72,7 @@ Public Sub RefreshVendors_Click()
     Set vendors = serviceVendor.SelectVendors()
 
     If vendors Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataVendor.NullVendorCollection, _
             MODULE_NAME & ".RefreshVendors_Click", _
             "DAO tidak mengembalikan collection vendor."
@@ -95,7 +95,7 @@ Public Sub RefreshVendors_Click()
         rowNumber = rowNumber + 1
 
         If vendorItem Is Nothing Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetMasterDataVendor.NullVendorInCollection, _
                 MODULE_NAME & ".RefreshVendors_Click", _
                 "Objek Vendor pada indeks " & _
@@ -107,7 +107,7 @@ Public Sub RefreshVendors_Click()
             vendorItem:=vendorItem, _
             rowNumber:=rowNumber
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         WriteVendorTableRow _
             tbl:=tbl, _
@@ -121,20 +121,20 @@ Public Sub RefreshVendors_Click()
     ' =====================================================
     ApplyVendorTableFormatting tbl
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 6: Display result
     ' =====================================================
     If vendorCount = 0 Then
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data vendor yang ditemukan.", _
             "Master Data Vendor"
 
     Else
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(vendorCount) & _
             " data vendor berhasil ditampilkan.", _
             "Master Data Vendor"
@@ -146,20 +146,20 @@ CleanUp:
     Set vendors = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set vendorItem = Nothing
     Set vendors = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan master data vendor."
 
 End Sub
@@ -177,14 +177,14 @@ Private Sub ValidateVendorItem( _
     Dim errInfo As ErrorInfo
 
     If vendorItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyVendorItem, _
             MODULE_NAME & ".ValidateVendorItem", _
             "Objek Vendor tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(vendorItem.Id) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(vendorItem.Id) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.InvalidVendorId, _
             MODULE_NAME & ".ValidateVendorItem", _
             "ID vendor pada record ke-" & _
@@ -192,8 +192,8 @@ Private Sub ValidateVendorItem( _
             " tidak valid."
     End If
 
-    If ValidationText.IsBlank(vendorItem.Name) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorItem.Name) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyRecordVendorName, _
             MODULE_NAME & ".ValidateVendorItem", _
             "Nama vendor pada record ke-" & _
@@ -201,8 +201,8 @@ Private Sub ValidateVendorItem( _
             " tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(vendorItem.CompanyName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorItem.CompanyName) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyRecordVendorCompanyName, _
             MODULE_NAME & ".ValidateVendorItem", _
             "Nama perusahaan vendor '" & _
@@ -210,8 +210,8 @@ Private Sub ValidateVendorItem( _
             "' tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(vendorItem.Code) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorItem.Code) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyRecordVendorCode, _
             MODULE_NAME & ".ValidateVendorItem", _
             "Kode vendor '" & _
@@ -223,9 +223,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateVendorItem"
 
 End Sub
@@ -244,21 +244,21 @@ Private Sub WriteVendorTableRow( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".WriteVendorTableRow", _
             "TableVendors belum diinisialisasi."
     End If
 
-    If Not TableManager.IsValidRow(tbl, rowIndex) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidRow, _
+    If Not managerTable.IsValidRow(tbl, rowIndex) Then
+        managerError.ThrowError _
+            managerTable.InvalidRow, _
             MODULE_NAME & ".WriteVendorTableRow", _
             "Target row vendor belum diinisialisasi."
     End If
 
     If vendorItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyVendorItem, _
             MODULE_NAME & ".WriteVendorTableRow", _
             "Objek Vendor tidak boleh kosong."
@@ -267,35 +267,35 @@ Private Sub WriteVendorTableRow( _
     ' =====================================================
     ' D: Id
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_ID, vendorItem.Id
 
     ' =====================================================
     ' E: Nama
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_NAME, vendorItem.Name
 
     ' =====================================================
     ' F: Nama Perusahaan
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_COMPANY_NAME, _
         vendorItem.CompanyName
 
     ' =====================================================
     ' G: Kode
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_CODE, vendorItem.Code
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".WriteVendorTableRow", _
         "Gagal menulis satu data vendor ke tabel."
 
@@ -313,21 +313,21 @@ Private Sub ClearVendorTable( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ClearVendorTable", _
             "TableVendors belum diinisialisasi."
     End If
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearVendorTable", _
         "Gagal membersihkan data vendor sebelumnya."
 
@@ -345,14 +345,14 @@ Private Sub ValidateVendorTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ValidateVendorTableColumns", _
             "TableVendors tidak ditemukan " & _
             "pada worksheet ini."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_ID, _
         COLUMN_NAME, _
         COLUMN_COMPANY_NAME, _
@@ -362,9 +362,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & _
         ".ValidateVendorTableColumns", _
         "Struktur TableVendors tidak sesuai."
@@ -387,13 +387,13 @@ Private Sub ApplyVendorTableFormatting( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ApplyVendorTableFormatting", _
             "TableVendors belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
@@ -408,7 +408,7 @@ Private Sub ApplyVendorTableFormatting( _
 
     For Each columnName In allColumns
 
-        Set columnRange = TableManager.GetColumnRange( _
+        Set columnRange = managerTable.GetColumnRange( _
             tbl, CStr(columnName))
 
         If Not columnRange Is Nothing Then
@@ -420,19 +420,19 @@ Private Sub ApplyVendorTableFormatting( _
     ' =====================================================
     ' ID formatting
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ID, "0", xlCenter
 
     ' =====================================================
     ' Text formatting
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_NAME, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_COMPANY_NAME, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_CODE, "@", xlCenter
 
 CleanUp:
@@ -440,11 +440,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & _
         ".ApplyVendorTableFormatting", _
         "Gagal menerapkan format TableVendors."
@@ -471,39 +471,39 @@ Public Sub SaveVendor_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy()
+    state = managerForm.BeginBusy()
 
     ' =====================================================
     ' Step 1: Read input values
     ' =====================================================
-    vendorName = FormManager.GetCellText( _
+    vendorName = managerForm.GetCellText( _
         Me, CELL_VENDOR_NAME)
 
-    vendorCode = FormManager.GetCellText( _
+    vendorCode = managerForm.GetCellText( _
         Me, CELL_VENDOR_CODE)
 
-    vendorCompanyName = FormManager.GetCellText( _
+    vendorCompanyName = managerForm.GetCellText( _
         Me, CELL_VENDOR_COMPANY_NAME)
 
     ' =====================================================
     ' Step 2: Validate input values
     ' =====================================================
-    If ValidationText.IsBlank(vendorName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorName) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyVendorName, _
             MODULE_NAME & ".SaveVendor_Click", _
             "Nama vendor wajib diisi."
     End If
 
-    If ValidationText.IsBlank(vendorCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorCode) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyVendorCode, _
             MODULE_NAME & ".SaveVendor_Click", _
             "Kode vendor wajib diisi."
     End If
 
-    If ValidationText.IsBlank(vendorCompanyName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorCompanyName) Then
+        managerError.ThrowError _
             sheetMasterDataVendor.EmptyVendorCompanyName, _
             MODULE_NAME & ".SaveVendor_Click", _
             "Nama perusahaan vendor wajib diisi."
@@ -540,7 +540,7 @@ Public Sub SaveVendor_Click()
         "Nama perusahaan: " & _
         vendorItem.CompanyName
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Simpan Vendor") Then
 
@@ -550,7 +550,7 @@ Public Sub SaveVendor_Click()
     ' =====================================================
     ' Step 5: Set processing status
     ' =====================================================
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Menyimpan vendor baru...", True
 
     ' =====================================================
@@ -559,7 +559,7 @@ Public Sub SaveVendor_Click()
     serviceVendor.CreateVendor _
         vendorItem:=vendorItem
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 7: Build success message
@@ -580,7 +580,7 @@ Public Sub SaveVendor_Click()
         "Nama perusahaan: " & _
         vendorItem.CompanyName
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Penyimpanan Vendor Berhasil"
 
@@ -598,22 +598,22 @@ Public Sub SaveVendor_Click()
     RefreshVendors_Click
 
 CleanUp:
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
     Set vendorItem = Nothing
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
     Set vendorItem = Nothing
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menyimpan vendor baru."
 
 End Sub
@@ -628,7 +628,7 @@ Private Sub ClearVendorInput()
 
     Dim errInfo As ErrorInfo
 
-    FormManager.ClearCells Me, _
+    managerForm.ClearCells Me, _
         CELL_VENDOR_NAME, _
         CELL_VENDOR_CODE, _
         CELL_VENDOR_COMPANY_NAME
@@ -638,9 +638,9 @@ Private Sub ClearVendorInput()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearVendorInput"
 
 End Sub

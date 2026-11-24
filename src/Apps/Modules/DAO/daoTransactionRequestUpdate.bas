@@ -21,13 +21,13 @@ Public Function CreateTransactionRequestUpdate( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_transaction_update_request")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_transaction_update_request")
 
-    DatabaseManager.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_proposed_transaction_uuid", proposedTransactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_requested_by", requestedBy
+    managerDatabase.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
+    managerDatabase.AddTextParameter cmd, "p_proposed_transaction_uuid", proposedTransactionUUID
+    managerDatabase.AddTextParameter cmd, "p_requested_by", requestedBy
 
-    CreateTransactionRequestUpdate = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateTransactionRequestUpdate = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -43,12 +43,12 @@ Public Function ApproveRequestUpdate( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_transaction_request_update_approved")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_transaction_request_update_approved")
 
-    DatabaseManager.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_proposed_transaction_uuid", proposedTransactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_user", user
+    managerDatabase.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
+    managerDatabase.AddTextParameter cmd, "p_proposed_transaction_uuid", proposedTransactionUUID
+    managerDatabase.AddTextParameter cmd, "p_user", user
 
-    ApproveRequestUpdate = DatabaseManager.ExecuteNonQuery(cmd)
+    ApproveRequestUpdate = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

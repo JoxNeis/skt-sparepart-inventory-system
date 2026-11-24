@@ -4,6 +4,11 @@
 --          vendor. The plant comes from the transaction header.
 -- Notes  : [po_number] was po_id. Renamed because *_id is reserved for
 --          foreign keys, and this is a free-text SAP PO number.
+--          [transaction_id] is one-to-one with transactions. Access
+--          DDL can only make one-to-many relations, so
+--          fk_orders_transaction is added through DAO after this
+--          file runs (see $OneToOneRelations in
+--          migration\generate_migration_vba.ps1).
 -- =====================================================================
 CREATE TABLE [orders] (
 	[id]                AUTOINCREMENT,
@@ -23,10 +28,6 @@ CREATE TABLE [orders] (
 	CONSTRAINT
 		[uq_orders_transaction]
 			UNIQUE ([transaction_id]),
-	CONSTRAINT
-		[fk_orders_transaction]
-			FOREIGN KEY ([transaction_id])
-				REFERENCES [transactions] ([id]),
 	CONSTRAINT
 		[fk_orders_sparepart]
 			FOREIGN KEY ([sparepart_id])

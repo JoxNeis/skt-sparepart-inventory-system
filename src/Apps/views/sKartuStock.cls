@@ -71,22 +71,22 @@ Public Sub LoadStockMovement()
     ' C6 = Tahun
     ' B8 = Nama Barang
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_PLANT)
 
-    catalogueName = FormManager.GetCellText( _
+    catalogueName = managerForm.GetCellText( _
         Me, CELL_CATALOGUE)
 
     periodMonth = GetMonthNumber( _
-        FormManager.GetCellValue(Me, CELL_MONTH))
+        managerForm.GetCellValue(Me, CELL_MONTH))
 
-    yearValue = FormManager.GetCellValue(Me, CELL_YEAR)
+    yearValue = managerForm.GetCellValue(Me, CELL_YEAR)
 
-    ' Not IsNumeric (instead of ValidationNumeric.IsNotNumber)
+    ' Not IsNumeric (instead of managerValidationNumeric.IsNotNumber)
     ' keeps accepting a blank year as 0 here, as before; it is
     ' rejected below as "Periode tahun tidak valid."
     If Not IsNumeric(yearValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetKartuStock.InvalidYearNumber, _
             MODULE_NAME & ".LoadStockMovement", _
             "Tahun harus berupa angka."
@@ -97,35 +97,35 @@ Public Sub LoadStockMovement()
     ' =====================================================
     ' Validate worksheet inputs
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetKartuStock.EmptyPlantName, _
             MODULE_NAME & ".LoadStockMovement", _
             "Lokasi tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             sheetKartuStock.EmptyCatalogueName, _
             MODULE_NAME & ".LoadStockMovement", _
             "Nama barang tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsOutOfRange(periodMonth, 1, 12) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsOutOfRange(periodMonth, 1, 12) Then
+        managerError.ThrowError _
             sheetKartuStock.InvalidPeriodMonth, _
             MODULE_NAME & ".LoadStockMovement", _
             "Periode bulan tidak valid."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(periodYear) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(periodYear) Then
+        managerError.ThrowError _
             sheetKartuStock.InvalidPeriodYear, _
             MODULE_NAME & ".LoadStockMovement", _
             "Periode tahun tidak valid."
     End If
 
-    state = FormManager.BeginBusy()
+    state = managerForm.BeginBusy()
 
     ' =====================================================
     ' Call service functions
@@ -147,7 +147,7 @@ Public Sub LoadStockMovement()
     ' =====================================================
     ' Get and validate TableKartuStock
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     allColumns = Array( _
         COLUMN_NO, _
@@ -163,14 +163,14 @@ Public Sub LoadStockMovement()
         COLUMN_REMARKS, _
         COLUMN_PIC)
 
-    TableManager.ValidateColumns tbl, allColumns
+    managerTable.ValidateColumns tbl, allColumns
 
     ' =====================================================
     ' Clear previous output
     '
     ' The table rows stay; only their values are cleared.
     ' =====================================================
-    TableManager.ClearContents tbl
+    managerTable.ClearContents tbl
 
     ' =====================================================
     ' Write stock movements to TableKartuStock
@@ -185,64 +185,64 @@ Public Sub LoadStockMovement()
 
         rowIndex = rowIndex + 1
 
-        If Not TableManager.IsValidRow(tbl, rowIndex) Then
-            rowIndex = TableManager.AddRow(tbl)
+        If Not managerTable.IsValidRow(tbl, rowIndex) Then
+            rowIndex = managerTable.AddRow(tbl)
         End If
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, itemNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_TRANSACTION_DATE, _
             CDate(stockMovementItem.MovementDate)
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_BEGINNING_STOCK, _
             stockMovementItem.beginningStock
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_INCOMING_REFERENCE, _
             stockMovementItem.IncomingReferenceNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_INCOMING_FROM, _
             stockMovementItem.IncomingFrom
 
         If stockMovementItem.incomingAmount > 0 Then
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_INCOMING_AMOUNT, _
                 stockMovementItem.incomingAmount
         Else
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_INCOMING_AMOUNT, Empty
         End If
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_OUTGOING_REFERENCE, _
             stockMovementItem.OutgoingReferenceNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_OUTGOING_TO, _
             stockMovementItem.OutgoingTo
 
         If stockMovementItem.outgoingAmount > 0 Then
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_OUTGOING_AMOUNT, _
                 stockMovementItem.outgoingAmount
         Else
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_OUTGOING_AMOUNT, Empty
         End If
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_END_STOCK, _
             stockMovementItem.EndStock
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REMARKS, _
             stockMovementItem.remarks
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PIC, _
             stockMovementItem.personInCharge
 
@@ -255,24 +255,24 @@ Public Sub LoadStockMovement()
     ' =====================================================
     If stockMovements.Count > 0 Then
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, COLUMN_TRANSACTION_DATE, "dd-mmm-yyyy"
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, COLUMN_BEGINNING_STOCK, "#,##0.00"
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, COLUMN_INCOMING_AMOUNT, "#,##0.00"
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, COLUMN_OUTGOING_AMOUNT, "#,##0.00"
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, COLUMN_END_STOCK, "#,##0.00"
 
         For Each columnName In allColumns
 
-            Set columnRange = TableManager.GetColumnRange( _
+            Set columnRange = managerTable.GetColumnRange( _
                 tbl, CStr(columnName))
 
             If Not columnRange Is Nothing Then
@@ -284,19 +284,19 @@ Public Sub LoadStockMovement()
     End If
 
     If stockMovements.Count = 0 Then
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data pergerakan stok yang ditemukan " & _
             "untuk filter tersebut.", _
             "Kartu Stock"
     Else
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(stockMovements.Count) & _
             " data pergerakan stok berhasil dimuat.", _
             "Kartu Stock"
     End If
 
 CleanUp:
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set columnRange = Nothing
     Set stockMovementItem = Nothing
@@ -306,16 +306,16 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set columnRange = Nothing
     Set stockMovementItem = Nothing
     Set stockMovements = Nothing
     Set tbl = Nothing
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan kartu stock."
 
 End Sub
@@ -372,7 +372,7 @@ Private Function GetMonthNumber( _
             GetMonthNumber = 12
 
         Case Else
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetKartuStock.InvalidMonthName, _
                 MODULE_NAME & ".GetMonthNumber", _
                 "Nama bulan tidak valid: " & _

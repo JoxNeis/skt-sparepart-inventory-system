@@ -44,12 +44,12 @@ Private Sub Worksheet_SelectionChange( _
         Exit Sub
     End If
 
-    state = FormManager.CaptureState()
+    state = managerForm.CaptureState()
 
     ' =====================================================
     ' Date input cells
     ' =====================================================
-    If FormManager.IsInRange( _
+    If managerForm.IsInRange( _
         Target, _
         Me.Range( _
             CELL_FROM_DATE & ":" & CELL_UNTIL_DATE _
@@ -57,7 +57,7 @@ Private Sub Worksheet_SelectionChange( _
 
         Application.EnableEvents = False
 
-        FormManager.ShowDatePicker Target
+        managerForm.ShowDatePicker Target
 
         GoTo CleanUp
     End If
@@ -65,21 +65,21 @@ Private Sub Worksheet_SelectionChange( _
     ' =====================================================
     ' Get request recap table
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     ' =====================================================
     ' UPDATE column clicked
     ' =====================================================
-    If TableManager.IsInColumn( _
+    If managerTable.IsInColumn( _
         Target, _
         tbl, _
         COLUMN_UPDATE) Then
 
-        If Not ValidationText.IsSameText( _
+        If Not managerValidationText.IsSameText( _
             TrimText(CStr(Target.value)), _
             "UPDATE") Then
 
@@ -89,7 +89,7 @@ Private Sub Worksheet_SelectionChange( _
         Application.EnableEvents = False
 
         selectedRowIndex = _
-            TableManager.GetRowIndex(tbl, Target)
+            managerTable.GetRowIndex(tbl, Target)
 
         CreateRequestUpdateProposal _
             tbl:=tbl, _
@@ -102,18 +102,18 @@ Private Sub Worksheet_SelectionChange( _
 CleanUp:
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -135,37 +135,37 @@ Public Sub SearchRequest_Click()
 
     Dim errInfo As ErrorInfo
 
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(plantName) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyPlantName, _
             MODULE_NAME & ".SearchRequest_Click", _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_FROM_DATE) Then
-        ErrorManager.ThrowError _
+    If Not managerForm.IsCellDate(Me, CELL_FROM_DATE) Then
+        managerError.ThrowError _
             sheetRecapRequest.InvalidFromDate, _
             MODULE_NAME & ".SearchRequest_Click", _
             "Tanggal awal tidak valid."
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_UNTIL_DATE) Then
-        ErrorManager.ThrowError _
+    If Not managerForm.IsCellDate(Me, CELL_UNTIL_DATE) Then
+        managerError.ThrowError _
             sheetRecapRequest.InvalidUntilDate, _
             MODULE_NAME & ".SearchRequest_Click", _
             "Tanggal akhir tidak valid."
     End If
 
     fromDateValue = DateValue( _
-        CDate(FormManager.GetCellValue(Me, CELL_FROM_DATE)))
+        CDate(managerForm.GetCellValue(Me, CELL_FROM_DATE)))
 
     untilDateValue = DateValue( _
-        CDate(FormManager.GetCellValue(Me, CELL_UNTIL_DATE)))
+        CDate(managerForm.GetCellValue(Me, CELL_UNTIL_DATE)))
 
     If fromDateValue > untilDateValue Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapRequest.InvalidDateRange, _
             MODULE_NAME & ".SearchRequest_Click", _
             "Tanggal awal tidak boleh lebih besar " & _
@@ -179,12 +179,12 @@ Public Sub SearchRequest_Click()
             fromDate:=fromDateValue, _
             untilDate:=untilDateValue)
 
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ' =====================================================
     ' Step 4: Clear the existing table rows
     ' =====================================================
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
     ' =====================================================
     ' Step 5: Fill the table with the result
@@ -195,48 +195,48 @@ Public Sub SearchRequest_Click()
 
         rowNumber = rowNumber + 1
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, rowNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UUID, _
             requestItem.UUID
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_MOBILE_POST, _
             requestItem.MobilePost.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CATALOGUE, _
             requestItem.Catalogue.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_AMOUNT, _
             requestItem.Amount
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UOM, _
             requestItem.unitOfMeasurement
 
         If requestItem.orderDate > 0 Then
 
-            TableManager.SetValue _
+            managerTable.SetValue _
                 tbl, rowIndex, COLUMN_ORDER_DATE, _
                 requestItem.orderDate
 
         End If
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REMARKS, _
             requestItem.remarks
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PIC, _
             requestItem.personInCharge
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UPDATE, "UPDATE"
 
     Next requestItem
@@ -251,13 +251,13 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
     Set requestItem = Nothing
     Set requests = Nothing
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -270,17 +270,17 @@ Private Sub ApplyRequestTableFormat( _
 
     Dim errInfo As ErrorInfo
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ORDER_DATE, "dd-mmm-yyyy"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_AMOUNT, "#,##0.00"
 
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_UPDATE)
 
     If Not columnRange Is Nothing Then
@@ -305,12 +305,12 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
     Set tbl = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyRequestTableFormat"
 
 End Sub
@@ -356,21 +356,21 @@ Private Sub CreateRequestUpdateProposal( _
     ' Step 1: Validate table
     ' =====================================================
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapRequest.EmptyRequestTable, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Tabel request belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
-        ErrorManager.ThrowError _
+    If Not managerTable.HasRows(tbl) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyRequestTableRows, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Tabel request tidak memiliki data."
     End If
 
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
-        ErrorManager.ThrowError _
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
+        managerError.ThrowError _
             sheetRecapRequest.InvalidSelectedRow, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Baris request yang dipilih tidak valid."
@@ -380,13 +380,13 @@ Private Sub CreateRequestUpdateProposal( _
     ' Step 2: Validate action cell
     ' =====================================================
     If actionCell Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapRequest.EmptyActionCell, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Cell UPDATE tidak ditemukan."
     End If
 
-    If Not ValidationText.IsSameText( _
+    If Not managerValidationText.IsSameText( _
         TrimText(CStr(actionCell.value)), _
         "UPDATE") Then
 
@@ -396,11 +396,11 @@ Private Sub CreateRequestUpdateProposal( _
     ' =====================================================
     ' Step 3: Read original transaction UUID
     ' =====================================================
-    originalUUID = TableManager.GetText( _
+    originalUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UUID)
 
-    If ValidationText.IsBlank(originalUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(originalUUID) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyOriginalRequestUUID, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "UUID transaksi request original " & _
@@ -410,11 +410,11 @@ Private Sub CreateRequestUpdateProposal( _
     ' =====================================================
     ' Step 4: Read manufacturing plant
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyUpdatePlantName, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Nama manufacturing plant " & _
@@ -424,44 +424,44 @@ Private Sub CreateRequestUpdateProposal( _
     ' =====================================================
     ' Step 5: Read text values from selected row
     ' =====================================================
-    mobilePostName = TableManager.GetText( _
+    mobilePostName = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_MOBILE_POST)
 
-    catalogueName = TableManager.GetText( _
+    catalogueName = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_CATALOGUE)
 
-    unitOfMeasurement = TableManager.GetText( _
+    unitOfMeasurement = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UOM)
 
-    remarks = TableManager.GetText( _
+    remarks = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_REMARKS)
 
-    personInCharge = TableManager.GetText( _
+    personInCharge = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PIC)
 
-    If ValidationText.IsBlank(mobilePostName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(mobilePostName) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyMobilePostName, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Nama mobile post tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyCatalogueName, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Nama barang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(unitOfMeasurement) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(unitOfMeasurement) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyUnitOfMeasurement, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Satuan barang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(personInCharge) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(personInCharge) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyPersonInCharge, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "PIC request tidak boleh kosong."
@@ -470,51 +470,51 @@ Private Sub CreateRequestUpdateProposal( _
     ' =====================================================
     ' Step 6: Read and validate request date
     ' =====================================================
-    requestDateValue = TableManager.GetValue( _
+    requestDateValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_ORDER_DATE)
 
-    If ValidationText.IsBlank(requestDateValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestDateValue) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyRequestDate, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Tanggal request tidak boleh kosong."
     End If
 
     If Not IsDate(requestDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapRequest.InvalidRequestDate, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Tanggal request tidak valid."
     End If
 
-    requestDate = TableManager.GetDate( _
+    requestDate = managerTable.GetDate( _
         tbl, selectedRowIndex, COLUMN_ORDER_DATE)
 
     ' =====================================================
     ' Step 7: Read and validate request amount
     ' =====================================================
-    requestAmountValue = TableManager.GetValue( _
+    requestAmountValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_AMOUNT)
 
-    If ValidationText.IsBlank(requestAmountValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestAmountValue) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyRequestAmount, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Jumlah request tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsNotNumber(requestAmountValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNotNumber(requestAmountValue) Then
+        managerError.ThrowError _
             sheetRecapRequest.InvalidRequestAmount, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Jumlah request harus berupa angka."
     End If
 
-    requestAmount = TableManager.GetDouble( _
+    requestAmount = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_AMOUNT)
 
-    If ValidationNumeric.IsZeroOrNegative(requestAmount) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(requestAmount) Then
+        managerError.ThrowError _
             sheetRecapRequest.ZeroOrNegativeRequestAmount, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "Jumlah request harus lebih besar dari nol."
@@ -619,7 +619,7 @@ Private Sub CreateRequestUpdateProposal( _
         "Request proposed akan dibuat dalam kondisi " & _
         "tidak aktif dan menunggu persetujuan."
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Permintaan Update Request") Then
 
@@ -643,7 +643,7 @@ Private Sub CreateRequestUpdateProposal( _
         .Interior.Color = RGB(128, 128, 128)
     End With
 
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Membuat permintaan update request...", True
 
     ' =====================================================
@@ -661,19 +661,19 @@ Private Sub CreateRequestUpdateProposal( _
 
     proposedUUID = TrimText(proposedUUID)
 
-    If ValidationText.IsBlank(proposedUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(proposedUUID) Then
+        managerError.ThrowError _
             sheetRecapRequest.EmptyProposedRequestUUID, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "UUID transaksi request proposed " & _
             "tidak berhasil dibuat."
     End If
 
-    If ValidationText.IsSameText( _
+    If managerValidationText.IsSameText( _
         originalUUID, _
         proposedUUID) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapRequest.SameOriginalProposedUUID, _
             MODULE_NAME & ".CreateRequestUpdateProposal", _
             "UUID transaksi request original dan " & _
@@ -696,7 +696,7 @@ Private Sub CreateRequestUpdateProposal( _
         .Interior.Color = RGB(0, 128, 0)
     End With
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 16: Show success message
@@ -718,7 +718,7 @@ Private Sub CreateRequestUpdateProposal( _
         vbCrLf & vbCrLf & _
         "Status: Menunggu persetujuan."
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Permintaan Update Berhasil"
 
@@ -728,7 +728,7 @@ Private Sub CreateRequestUpdateProposal( _
     SearchRequest_Click
 
 CleanUp:
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     Set proposedRequest = Nothing
     Set proposedMobilePost = Nothing
@@ -738,7 +738,7 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     ' Restore the action cell when proposal creation fails.
     If Not actionCell Is Nothing Then
@@ -760,14 +760,14 @@ ErrorHandler:
 
     End If
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     Set proposedRequest = Nothing
     Set proposedMobilePost = Nothing
     Set proposedPlant = Nothing
     Set proposedCatalogue = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateRequestUpdateProposal"
 
 End Sub

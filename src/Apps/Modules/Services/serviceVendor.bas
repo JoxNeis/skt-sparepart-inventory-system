@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_VENDOR"
 
 ' =========================================================
 ' ERROR CODES (18200 - 18299)
-' Usage: ErrorManager.ThrowError serviceVendor.EmptyVendorObject, ...
+' Usage: managerError.ThrowError serviceVendor.EmptyVendorObject, ...
 ' =========================================================
 Public Const EmptyRecordsetVendorName As Long = 18201          ' query returned a blank vendor name
 Public Const EmptyRecordsetVendorCode As Long = 18202          ' query returned a blank vendor code
@@ -45,7 +45,7 @@ Public Function SelectVendors() As Collection
     ' =====================================================
     ' Step 1: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set vendors = daoVendor.SelectVendors(conn)
 
@@ -58,8 +58,8 @@ Public Function SelectVendors() As Collection
 
         recordNumber = recordNumber + 1
 
-        If ValidationText.IsBlank(vendorItem.Name) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(vendorItem.Name) Then
+            managerError.ThrowError _
                 serviceVendor.EmptyRecordsetVendorName, _
                 MODULE_NAME & ".SelectVendors", _
                 "Nama vendor pada record ke-" & _
@@ -67,16 +67,16 @@ Public Function SelectVendors() As Collection
                 " tidak boleh kosong."
         End If
 
-        If ValidationText.IsBlank(vendorItem.Code) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(vendorItem.Code) Then
+            managerError.ThrowError _
                 serviceVendor.EmptyRecordsetVendorCode, _
                 MODULE_NAME & ".SelectVendors", _
                 "Kode vendor '" & vendorItem.Name & _
                 "' tidak boleh kosong."
         End If
 
-        If ValidationText.IsBlank(vendorItem.CompanyName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(vendorItem.CompanyName) Then
+            managerError.ThrowError _
                 serviceVendor.EmptyRecordsetVendorCompanyName, _
                 MODULE_NAME & ".SelectVendors", _
                 "Nama perusahaan vendor '" & _
@@ -91,9 +91,9 @@ Public Function SelectVendors() As Collection
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectVendors", _
         "Gagal mengambil daftar vendor."
 
@@ -125,7 +125,7 @@ Public Sub CreateVendor( _
     ' Step 1: Validate Vendor object
     ' =====================================================
     If vendorItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceVendor.EmptyVendorObject, _
             MODULE_NAME & ".CreateVendor", _
             "Objek Vendor tidak boleh kosong."
@@ -141,23 +141,23 @@ Public Sub CreateVendor( _
     ' =====================================================
     ' Step 3: Validate Vendor properties
     ' =====================================================
-    If ValidationText.IsBlank(vendorName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorName) Then
+        managerError.ThrowError _
             serviceVendor.EmptyVendorName, _
             MODULE_NAME & ".CreateVendor", _
             "Nama vendor tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(vendorCompanyName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorCompanyName) Then
+        managerError.ThrowError _
             serviceVendor.EmptyVendorCompanyName, _
             MODULE_NAME & ".CreateVendor", _
             "Nama perusahaan vendor " & _
             "tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(vendorCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(vendorCode) Then
+        managerError.ThrowError _
             serviceVendor.EmptyVendorCode, _
             MODULE_NAME & ".CreateVendor", _
             "Kode vendor tidak boleh kosong."
@@ -166,10 +166,10 @@ Public Sub CreateVendor( _
     ' =====================================================
     ' Step 4: Determine current user
     ' =====================================================
-    currentUser = Trim$(pConfig.currentUser())
+    currentUser = Trim$(coreConfig.currentUser())
 
-    If ValidationText.IsBlank(currentUser) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(currentUser) Then
+        managerError.ThrowError _
             serviceVendor.EmptyCurrentUser, _
             MODULE_NAME & ".CreateVendor", _
             "User yang membuat vendor " & _
@@ -179,9 +179,9 @@ Public Sub CreateVendor( _
     ' =====================================================
     ' Step 5: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -192,16 +192,16 @@ Public Sub CreateVendor( _
     ' =====================================================
     ' Step 7: Validate affected rows
     ' =====================================================
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceVendor.NoRowAffectedCreateVendor, _
             MODULE_NAME & ".CreateVendor", _
             "Vendor tidak berhasil dibuat. " & _
             "Nama atau kode vendor mungkin sudah ada."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceVendor.MultipleRowsAffectedCreateVendor, _
             MODULE_NAME & ".CreateVendor", _
             "Pembuatan vendor memengaruhi lebih dari " & _
@@ -224,19 +224,19 @@ Public Sub CreateVendor( _
     ' =====================================================
     ' Step 10: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateVendor", _
         "Gagal membuat data vendor."
 
@@ -256,7 +256,7 @@ Private Function BuildVendorCreateDetail( _
     Dim errInfo As ErrorInfo
 
     If vendorItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceVendor.EmptyVendorObject, _
             MODULE_NAME & ".BuildVendorCreateDetail", _
             "Objek Vendor tidak boleh kosong."
@@ -271,9 +271,9 @@ Private Function BuildVendorCreateDetail( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".BuildVendorCreateDetail"
 
 End Function

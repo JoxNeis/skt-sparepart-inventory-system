@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_CATALOGUE"
 
 ' =========================================================
 ' ERROR CODES (17200 - 17299)
-' Usage: ErrorManager.ThrowError serviceCatalogue.EmptyCatalogueObject, ...
+' Usage: managerError.ThrowError serviceCatalogue.EmptyCatalogueObject, ...
 ' =========================================================
 Public Const EmptyCatalogueObject As Long = 17201                 ' Catalogue object is Nothing
 Public Const EmptyCatalogueName As Long = 17202
@@ -38,16 +38,16 @@ Public Function GetAllCatalogues() As Collection
     Dim conn As ADODB.connection
     Dim errInfo As ErrorInfo
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set GetAllCatalogues = daoCatalogue.GetAllCatalogues(conn)
 
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".GetAllCatalogues", _
         "Gagal mencari katalog."
 
@@ -82,7 +82,7 @@ Public Sub CreateCatalogue( _
     ' Step 1: Validate Catalogue object
     ' =====================================================
     If catalogueItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueObject, _
             MODULE_NAME & ".CreateCatalogue", _
             "Objek Catalogue tidak boleh kosong."
@@ -100,36 +100,36 @@ Public Sub CreateCatalogue( _
     ' =====================================================
     ' Step 3: Validate Catalogue property values
     ' =====================================================
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueName, _
             MODULE_NAME & ".CreateCatalogue", _
             "Nama catalogue tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(catalogueAlias) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueAlias) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueAlias, _
             MODULE_NAME & ".CreateCatalogue", _
             "Alias catalogue tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(catalogueCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueCode) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueCode, _
             MODULE_NAME & ".CreateCatalogue", _
             "Kode catalogue tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(catalogueCategory) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueCategory) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueCategory, _
             MODULE_NAME & ".CreateCatalogue", _
             "Kategori catalogue tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(unitOfMeasurement) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(unitOfMeasurement) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueUnitOfMeasurement, _
             MODULE_NAME & ".CreateCatalogue", _
             "Satuan catalogue tidak boleh kosong."
@@ -138,10 +138,10 @@ Public Sub CreateCatalogue( _
     ' =====================================================
     ' Step 4: Determine current user
     ' =====================================================
-    currentUser = Trim$(pConfig.currentUser())
+    currentUser = Trim$(coreConfig.currentUser())
 
-    If ValidationText.IsBlank(currentUser) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(currentUser) Then
+        managerError.ThrowError _
             serviceCatalogue.EmptyCurrentUser, _
             MODULE_NAME & ".CreateCatalogue", _
             "User yang membuat catalogue " & _
@@ -151,9 +151,9 @@ Public Sub CreateCatalogue( _
     ' =====================================================
     ' Step 5: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -164,8 +164,8 @@ Public Sub CreateCatalogue( _
     ' =====================================================
     ' Step 7: Validate affected rows
     ' =====================================================
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceCatalogue.NoRowAffectedCreateCatalogue, _
             MODULE_NAME & ".CreateCatalogue", _
             "Catalogue tidak berhasil dibuat. " & _
@@ -173,8 +173,8 @@ Public Sub CreateCatalogue( _
             "digunakan oleh catalogue lain."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceCatalogue.MultipleRowsAffectedCreateCatalogue, _
             MODULE_NAME & ".CreateCatalogue", _
             "Pembuatan catalogue memengaruhi lebih " & _
@@ -197,19 +197,19 @@ Public Sub CreateCatalogue( _
     ' =====================================================
     ' Step 10: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateCatalogue", _
         "Gagal membuat data catalogue."
 
@@ -229,7 +229,7 @@ Private Function BuildCatalogueCreateDetail( _
     Dim errInfo As ErrorInfo
 
     If catalogueItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceCatalogue.EmptyCatalogueObject, _
             MODULE_NAME & ".BuildCatalogueCreateDetail", _
             "Objek Catalogue tidak boleh kosong."
@@ -246,9 +246,9 @@ Private Function BuildCatalogueCreateDetail( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".BuildCatalogueCreateDetail"
 
 End Function

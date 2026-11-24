@@ -2,6 +2,11 @@
 -- Table  : requests
 -- Purpose: Detail of a REQUEST transaction - spareparts issued from the
 --          plant store to a mobile maintenance. Leaves stock on request_date.
+-- Notes  : [transaction_id] is one-to-one with transactions. Access
+--          DDL can only make one-to-many relations, so
+--          fk_requests_transaction is added through DAO after this
+--          file runs (see $OneToOneRelations in
+--          migration\generate_migration_vba.ps1).
 -- =====================================================================
 CREATE TABLE [requests] (
 	[id]                     AUTOINCREMENT,
@@ -20,10 +25,6 @@ CREATE TABLE [requests] (
 	CONSTRAINT
 		[uq_requests_transaction]
 			UNIQUE ([transaction_id]),
-	CONSTRAINT
-		[fk_requests_transaction]
-			FOREIGN KEY ([transaction_id])
-				REFERENCES [transactions] ([id]),
 	CONSTRAINT
 		[fk_requests_mobile_maintenance]
 			FOREIGN KEY ([mobile_maintenance_id])

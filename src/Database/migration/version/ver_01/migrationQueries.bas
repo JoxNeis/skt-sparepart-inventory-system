@@ -1716,9 +1716,13 @@ End Sub
 ' transaction_get_next_uuid.sql
 ' Query   : transaction_get_next_uuid
 ' Type    : SELECT
-' Purpose : Next free document number <PREFIX>-<yyyymmdd>-<nnn>,
-'           e.g. ORD-20261124-001. Prefixes come from
-'           serviceTransaction: ORD, RCV, WRQ.
+' Purpose : Next free document number
+'           <PLANT>-<PREFIX>-<yyyymmdd>-<nnn>,
+'           e.g. SBY01-ORD-20261124-001.
+'           <PLANT> is manufacturing_plants.code (max 15 chars, so the
+'           number is at most 32 chars and fits transactions.uuid).
+'           Prefixes come from serviceTransaction: ORD, RCV, WRQ, MTW.
+'           Numbering restarts at 001 per plant, prefix and day.
 '           A range on [uuid] (instead of Left/Mid) lets Access use
 '           the unique index. uq_transactions_uuid still rejects a
 '           number taken by another user in the meantime.
@@ -1729,11 +1733,14 @@ Public Sub Query_transaction_get_next_uuid()
 
     sql = ""
     sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_code] Text(15)," & vbCrLf
     sql = sql & "    [p_uuid_prefix] Text(3)," & vbCrLf
     sql = sql & "    [p_transaction_date] DateTime;" & vbCrLf
     sql = sql & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    UCase([p_uuid_prefix])" & vbCrLf
+    sql = sql & "    UCase(Trim([p_manufacturing_plant_code]))" & vbCrLf
+    sql = sql & "        & '-'" & vbCrLf
+    sql = sql & "        & UCase([p_uuid_prefix])" & vbCrLf
     sql = sql & "        & '-'" & vbCrLf
     sql = sql & "        & Format([p_transaction_date], 'yyyymmdd')" & vbCrLf
     sql = sql & "        & '-'" & vbCrLf
@@ -1748,11 +1755,15 @@ Public Sub Query_transaction_get_next_uuid()
     sql = sql & "FROM" & vbCrLf
     sql = sql & "    transactions AS t" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
-    sql = sql & "    t.uuid >= UCase([p_uuid_prefix])" & vbCrLf
+    sql = sql & "    t.uuid >= UCase(Trim([p_manufacturing_plant_code]))" & vbCrLf
+    sql = sql & "        & '-'" & vbCrLf
+    sql = sql & "        & UCase([p_uuid_prefix])" & vbCrLf
     sql = sql & "        & '-'" & vbCrLf
     sql = sql & "        & Format([p_transaction_date], 'yyyymmdd')" & vbCrLf
     sql = sql & "        & '-000'" & vbCrLf
-    sql = sql & "    AND t.uuid <= UCase([p_uuid_prefix])" & vbCrLf
+    sql = sql & "    AND t.uuid <= UCase(Trim([p_manufacturing_plant_code]))" & vbCrLf
+    sql = sql & "        & '-'" & vbCrLf
+    sql = sql & "        & UCase([p_uuid_prefix])" & vbCrLf
     sql = sql & "        & '-'" & vbCrLf
     sql = sql & "        & Format([p_transaction_date], 'yyyymmdd')" & vbCrLf
     sql = sql & "        & '-999';" & vbCrLf
@@ -2393,7 +2404,8 @@ End Sub
 ' vendor_list.sql
 ' Query   : vendor_list
 ' Type    : SELECT
-' Purpose : All vendors that are not archived.
+' Purpose : All vendors that are not archived, with a "code - name"
+'           label for drop-downs (same as sparepart_list.display_name).
 ' Replaces: select_vendors
 '----------------------------------------------------------------------
 Public Sub Query_vendor_list()
@@ -2405,7 +2417,8 @@ Public Sub Query_vendor_list()
     sql = sql & "    v.code AS code," & vbCrLf
     sql = sql & "    v.[name] AS [name]," & vbCrLf
     sql = sql & "    v.company_name AS company_name," & vbCrLf
-    sql = sql & "    v.email AS email" & vbCrLf
+    sql = sql & "    v.email AS email," & vbCrLf
+    sql = sql & "    v.code & ' - ' & v.[name] AS display_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
     sql = sql & "    vendors AS v" & vbCrLf
     sql = sql & "WHERE" & vbCrLf

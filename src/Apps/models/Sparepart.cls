@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - SPAREPART
 ' Table      : spareparts
-' Error codes: entitiesSparepart (ErrorCodesEntities.bas)
+' Error codes: entitiesSparepart (managerErrorCodesEntities.bas)
 '
 ' Was: Catalogue
 ' [display] is a calculated field in the table ("code - name");
@@ -51,8 +51,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesSparepart.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -251,16 +251,16 @@ Private Function CheckText( _
     value = Trim$(value)
 
     If emptyCode <> 0 Then
-        If ValidationText.IsBlank(value) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(value) Then
+            managerError.ThrowError _
                 emptyCode, _
                 CLASS_NAME & "." & propertyName, _
                 CLASS_NAME & ": " & label & " tidak boleh kosong."
         End If
     End If
 
-    If ValidationText.IsLongerThan(value, maxLength) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, maxLength) Then
+        managerError.ThrowError _
             tooLongCode, _
             CLASS_NAME & "." & propertyName, _
             CLASS_NAME & ": " & label & " maksimal " & _

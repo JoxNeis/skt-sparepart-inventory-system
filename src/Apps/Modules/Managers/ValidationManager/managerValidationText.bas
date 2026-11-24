@@ -1,4 +1,4 @@
-Attribute VB_Name = "ValidationText"
+Attribute VB_Name = "managerValidationText"
 Option Explicit
 
 ' =========================================================
@@ -7,8 +7,8 @@ Option Explicit
 ' Every function returns a Boolean and never raises an
 ' error. The caller decides what to do with the result:
 '
-'   If ValidationText.IsBlank(value) Then
-'       ErrorManager.ThrowError _
+'   If managerValidationText.IsBlank(value) Then
+'       managerError.ThrowError _
 '           entitiesOrder.EmptyUUID, _
 '           CLASS_NAME & ".UUID", _
 '           "UUID tidak boleh kosong."
@@ -111,7 +111,7 @@ End Function
 ' True when the trimmed value matches one of the items in
 ' allowedValues (an Array).
 '
-'   If Not ValidationText.IsInList(value, _
+'   If Not managerValidationText.IsInList(value, _
 '       Array("DATANG", "DATANG SEBAGIAN", "BELUM DATANG")) Then
 ' =========================================================
 Public Function IsInList( _

@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_USER"
 
 ' =========================================================
 ' ERROR CODES (18100 - 18199)
-' Usage: ErrorManager.ThrowError serviceUser.EmptyUsername, ...
+' Usage: managerError.ThrowError serviceUser.EmptyUsername, ...
 ' =========================================================
 Public Const EmptyPlantName As Long = 18101                 ' manufacturing plant name is blank
 Public Const EmptyUsername As Long = 18102
@@ -46,16 +46,16 @@ Public Function SelectUsers() As ADODB.recordset
     Dim conn As ADODB.connection
     Dim errInfo As ErrorInfo
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectUsers = daoUser.SelectUsers(conn)
 
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectUsers", _
         "Gagal mengambil daftar user."
 
@@ -99,23 +99,23 @@ Public Sub CreateUser( _
     ' =====================================================
     ' Step 2: Validate input parameters
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceUser.EmptyPlantName, _
             MODULE_NAME & ".CreateUser", _
             "Nama manufacturing plant " & _
             "tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(username) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(username) Then
+        managerError.ThrowError _
             serviceUser.EmptyUsername, _
             MODULE_NAME & ".CreateUser", _
             "Username PMI tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(firstName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(firstName) Then
+        managerError.ThrowError _
             serviceUser.EmptyFirstName, _
             MODULE_NAME & ".CreateUser", _
             "Nama depan tidak boleh kosong."
@@ -123,22 +123,22 @@ Public Sub CreateUser( _
 
     ' Middle name is optional, so an empty value is valid.
 
-    If ValidationText.IsBlank(lastName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(lastName) Then
+        managerError.ThrowError _
             serviceUser.EmptyLastName, _
             MODULE_NAME & ".CreateUser", _
             "Nama belakang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(position) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(position) Then
+        managerError.ThrowError _
             serviceUser.EmptyPosition, _
             MODULE_NAME & ".CreateUser", _
             "Posisi user tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(tier) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(tier) Then
+        managerError.ThrowError _
             serviceUser.NegativeTier, _
             MODULE_NAME & ".CreateUser", _
             "Tier user harus lebih besar dari nol."
@@ -147,10 +147,10 @@ Public Sub CreateUser( _
     ' =====================================================
     ' Step 3: Determine the current application user
     ' =====================================================
-    currentUser = Trim$(pConfig.currentUser())
+    currentUser = Trim$(coreConfig.currentUser())
 
-    If ValidationText.IsBlank(currentUser) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(currentUser) Then
+        managerError.ThrowError _
             serviceUser.EmptyCurrentUser, _
             MODULE_NAME & ".CreateUser", _
             "User yang membuat data user baru " & _
@@ -160,9 +160,9 @@ Public Sub CreateUser( _
     ' =====================================================
     ' Step 4: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -175,8 +175,8 @@ Public Sub CreateUser( _
     ' =====================================================
     ' Step 6: Validate affected rows
     ' =====================================================
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceUser.NoRowAffectedCreateUser, _
             MODULE_NAME & ".CreateUser", _
             "User tidak berhasil dibuat." & _
@@ -185,8 +185,8 @@ Public Sub CreateUser( _
             "ditemukan atau username sudah digunakan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceUser.MultipleRowsAffectedCreateUser, _
             MODULE_NAME & ".CreateUser", _
             "Pembuatan user memengaruhi lebih dari " & _
@@ -216,19 +216,19 @@ Public Sub CreateUser( _
     ' =====================================================
     ' Step 9: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateUser", _
         "Gagal membuat data user."
 
@@ -258,22 +258,22 @@ Public Function CompareUser( _
     ' =====================================================
     ' Step 1: Validate parameters
     ' =====================================================
-    If ValidationText.IsBlank(requestorUsername) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestorUsername) Then
+        managerError.ThrowError _
             serviceUser.EmptyRequestorUsername, _
             MODULE_NAME & ".CompareUser", _
             "Username requestor tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(approverUsername) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(approverUsername) Then
+        managerError.ThrowError _
             serviceUser.EmptyApproverUsername, _
             MODULE_NAME & ".CompareUser", _
             "Username approver tidak boleh kosong."
     End If
 
-    If ValidationText.IsSameText(requestorUsername, approverUsername) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsSameText(requestorUsername, approverUsername) Then
+        managerError.ThrowError _
             serviceUser.SameRequestorApprover, _
             MODULE_NAME & ".CompareUser", _
             "Requestor dan approver tidak boleh " & _
@@ -283,7 +283,7 @@ Public Function CompareUser( _
     ' =====================================================
     ' Step 2: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set rs = daoUser.CompareUser(conn, requestorUsername, approverUsername)
 
@@ -294,7 +294,7 @@ Public Function CompareUser( _
     ' not found in the users table.
     ' =====================================================
     If rs.EOF Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceUser.NotFoundRequestorOrApprover, _
             MODULE_NAME & ".CompareUser", _
             "Requestor atau approver tidak ditemukan." & _
@@ -306,10 +306,10 @@ Public Function CompareUser( _
     ' =====================================================
     ' Step 4: Read and convert can_approve
     ' =====================================================
-    canApproveValue = DatabaseManager.FieldValue(rs, "can_approve")
+    canApproveValue = managerDatabase.FieldValue(rs, "can_approve")
 
     If IsError(canApproveValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceUser.InvalidCanApproveErrorValue, _
             MODULE_NAME & ".CompareUser", _
             "Hasil can_approve berisi nilai error."
@@ -318,7 +318,7 @@ Public Function CompareUser( _
     If IsNull(canApproveValue) Or _
        IsEmpty(canApproveValue) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceUser.EmptyCanApproveResult, _
             MODULE_NAME & ".CompareUser", _
             "Hasil can_approve tidak boleh kosong."
@@ -343,7 +343,7 @@ Public Function CompareUser( _
                 CompareUser = False
 
             Case Else
-                ErrorManager.ThrowError _
+                managerError.ThrowError _
                     serviceUser.InvalidCanApproveConversion, _
                     MODULE_NAME & ".CompareUser", _
                     "Hasil can_approve tidak dapat " & _
@@ -353,16 +353,16 @@ Public Function CompareUser( _
 
     End If
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CompareUser", _
         "Gagal membandingkan tier requestor " & _
         "dan approver."

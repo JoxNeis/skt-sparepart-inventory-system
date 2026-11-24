@@ -22,12 +22,12 @@ Public Function CreateActivityLog( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_activity_log")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_activity_log")
 
-    DatabaseManager.AddTextParameter cmd, "p_activity_code", activityCode
-    DatabaseManager.AddLongTextParameter cmd, "p_detail", detail
-    DatabaseManager.AddTextParameter cmd, "p_user", user
+    managerDatabase.AddTextParameter cmd, "p_activity_code", activityCode
+    managerDatabase.AddLongTextParameter cmd, "p_detail", detail
+    managerDatabase.AddTextParameter cmd, "p_user", user
 
-    CreateActivityLog = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateActivityLog = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

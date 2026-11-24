@@ -1,11 +1,11 @@
-Attribute VB_Name = "pHelper"
+Attribute VB_Name = "coreHelper"
 Option Explicit
 
 Private Const MODULE_NAME As String = "HELPER"
 
 ' =========================================================
 ' ERROR CODES (10200 - 10299)
-' Usage: ErrorManager.ThrowError pHelper.InvalidRecordsetNumber, ...
+' Usage: managerError.ThrowError coreHelper.InvalidRecordsetNumber, ...
 ' =========================================================
 Public Const InvalidRecordsetNumber As Long = 10201  ' database value is not numeric
 
@@ -30,11 +30,11 @@ Public Function RecordsetDouble(ByVal value As Variant) As Double
         Exit Function
     End If
 
-    ' Not IsNumeric (instead of ValidationNumeric.IsNotNumber) keeps
+    ' Not IsNumeric (instead of managerValidationNumeric.IsNotNumber) keeps
     ' accepting Yes/No (Boolean) fields as -1 / 0, as before.
     If Not IsNumeric(value) Then
-        ErrorManager.ThrowError _
-            pHelper.InvalidRecordsetNumber, _
+        managerError.ThrowError _
+            coreHelper.InvalidRecordsetNumber, _
             MODULE_NAME & ".RecordsetDouble", _
             "Nilai database bukan angka yang valid."
     End If
@@ -79,3 +79,24 @@ Public Function TextOrEmpty( _
     End If
 
 End Function
+
+Public Function SplitString( _
+    ByVal value As String, _
+    ByVal character As String) As Collection
+
+    Dim result As Collection
+    Dim parts() As String
+    Dim i As Long
+
+    Set result = New Collection
+    parts = Split(value, character)
+
+    For i = LBound(parts) To UBound(parts)
+        result.Add parts(i)
+    Next i
+
+    Set SplitString = result
+
+End Function
+
+

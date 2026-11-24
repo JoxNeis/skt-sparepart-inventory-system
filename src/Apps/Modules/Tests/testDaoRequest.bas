@@ -5,7 +5,7 @@ Private Const MODULE_NAME As String = "TEST_REQUEST"
 
 ' =========================================================
 ' ERROR CODES (16300 - 16399)
-' Usage: ErrorManager.ThrowError testDaoRequest.EmptyCreatedRequestUUID, ...
+' Usage: managerError.ThrowError testDaoRequest.EmptyCreatedRequestUUID, ...
 ' =========================================================
 Public Const EmptyCreatedRequestUUID As Long = 16301    ' CreateRequest returned no UUID
 
@@ -59,8 +59,8 @@ Public Sub TestWarehouseRequest()
     createdUuid = serviceRequest.CreateRequest( _
         requestItem:=requestItem)
 
-    If ValidationText.IsBlank(createdUuid) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(createdUuid) Then
+        managerError.ThrowError _
             testDaoRequest.EmptyCreatedRequestUUID, _
             MODULE_NAME & ".TestWarehouseRequest", _
             "CreateRequest tidak mengembalikan UUID."
@@ -87,7 +87,7 @@ Public Sub TestWarehouseRequest()
     Debug.Print "DATA HAS BEEN COMMITTED TO ACCESS"
     Debug.Print String$(80, "=")
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         "Request berhasil dibuat." & _
         vbCrLf & vbCrLf & _
         "UUID: " & createdUuid, _
@@ -100,9 +100,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menguji penyimpanan Request.", _
         "Test Request"
 
@@ -176,9 +176,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menguji select request.", _
         "Test Select Request"
 

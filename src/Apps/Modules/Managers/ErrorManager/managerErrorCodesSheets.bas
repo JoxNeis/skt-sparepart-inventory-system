@@ -1,4 +1,4 @@
-Attribute VB_Name = "ErrorCodesSheets"
+Attribute VB_Name = "managerErrorCodesSheets"
 Option Explicit
 
 ' =========================================================
@@ -9,7 +9,7 @@ Option Explicit
 ' sheet + <sheet code name without the leading s>.
 '
 ' Usage:
-'   ErrorManager.ThrowError sheetInputRequest.EmptyPlantName, ...
+'   managerError.ThrowError sheetInputRequest.EmptyPlantName, ...
 '   If errInfo.Number = sheetInputRequest.EmptyPlantName Then ...
 '
 ' Always qualify the member with the enum name: the same

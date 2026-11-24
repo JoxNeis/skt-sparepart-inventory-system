@@ -23,9 +23,9 @@ Public Function SelectUsers( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, QUERY_SELECT_USERS)
+    Set cmd = managerDatabase.CreateCommand(conn, QUERY_SELECT_USERS)
 
-    Set SelectUsers = DatabaseManager.ExecuteRecordset(cmd)
+    Set SelectUsers = managerDatabase.ExecuteRecordset(cmd)
 
 End Function
 
@@ -47,17 +47,17 @@ Public Function CreateUser( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_user")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_user")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddTextParameter cmd, "p_username", username
-    DatabaseManager.AddTextParameter cmd, "p_first_name", firstName
-    DatabaseManager.AddTextParameter cmd, "p_middle_name", middleName
-    DatabaseManager.AddTextParameter cmd, "p_last_name", lastName
-    DatabaseManager.AddTextParameter cmd, "p_position", position
-    DatabaseManager.AddLongParameter cmd, "p_tier", tier
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddTextParameter cmd, "p_username", username
+    managerDatabase.AddTextParameter cmd, "p_first_name", firstName
+    managerDatabase.AddTextParameter cmd, "p_middle_name", middleName
+    managerDatabase.AddTextParameter cmd, "p_last_name", lastName
+    managerDatabase.AddTextParameter cmd, "p_position", position
+    managerDatabase.AddLongParameter cmd, "p_tier", tier
 
-    CreateUser = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateUser = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -74,11 +74,11 @@ Public Function CompareUser( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "compare_user")
+    Set cmd = managerDatabase.CreateCommand(conn, "compare_user")
 
-    DatabaseManager.AddTextParameter cmd, "p_requestor_username", requestorUsername
-    DatabaseManager.AddTextParameter cmd, "p_approver_username", approverUsername
+    managerDatabase.AddTextParameter cmd, "p_requestor_username", requestorUsername
+    managerDatabase.AddTextParameter cmd, "p_approver_username", approverUsername
 
-    Set CompareUser = DatabaseManager.ExecuteRecordset(cmd)
+    Set CompareUser = managerDatabase.ExecuteRecordset(cmd)
 
 End Function

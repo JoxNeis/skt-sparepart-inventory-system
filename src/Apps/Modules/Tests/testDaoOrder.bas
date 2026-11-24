@@ -44,8 +44,8 @@ Public Sub TestCreateOrder()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
-    ErrorManager.ShowError errInfo
+    errInfo = managerError.CaptureError()
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -126,9 +126,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menguji pemilihan order.", _
         "Test Select Order"
 
@@ -157,7 +157,7 @@ Public Sub TestUpdateOrderPoId()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
-    ErrorManager.ShowError errInfo
+    errInfo = managerError.CaptureError()
+    managerError.ShowError errInfo
 
 End Sub

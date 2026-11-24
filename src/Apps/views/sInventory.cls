@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetInventory (ErrorCodesSheets.bas)
+' Error codes: sheetInventory (managerErrorCodesSheets.bas)
 
 Private Const MODULE_NAME As String = _
     "SHEET_INVENTORY"
@@ -67,7 +67,7 @@ Private Sub Worksheet_SelectionChange( _
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.CaptureState()
+    state = managerForm.CaptureState()
 
     ' Only process one selected cell.
     If Target.CountLarge <> 1 Then
@@ -77,16 +77,16 @@ Private Sub Worksheet_SelectionChange( _
     ' =====================================================
     ' Get TableInventory
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     ' =====================================================
     ' Detect UPDATE column click
     ' =====================================================
-    If Not TableManager.IsInColumn( _
+    If Not managerTable.IsInColumn( _
         Target, _
         tbl, _
         COLUMN_UPDATE) Then
@@ -94,7 +94,7 @@ Private Sub Worksheet_SelectionChange( _
         GoTo CleanUp
     End If
 
-    If Not ValidationText.IsSameText( _
+    If Not managerValidationText.IsSameText( _
         TrimText(CStr(Target.value)), _
         "UPDATE") Then
 
@@ -104,7 +104,7 @@ Private Sub Worksheet_SelectionChange( _
     Application.EnableEvents = False
 
     selectedRowIndex = _
-        TableManager.GetRowIndex(tbl, Target)
+        managerTable.GetRowIndex(tbl, Target)
 
     HandleUpdateROP _
         tbl:=tbl, _
@@ -114,19 +114,19 @@ Private Sub Worksheet_SelectionChange( _
 CleanUp:
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
-    FormManager.ClearStatus
+    managerForm.EndBusy state
+    managerForm.ClearStatus
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal memproses update reorder point."
 
 End Sub
@@ -158,17 +158,17 @@ Public Sub SearchInventory_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data stock inventory...")
 
     ' =====================================================
     ' Step 1: Read and validate manufacturing plant
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_MANUFACTURING_PLANT)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetInventory.EmptyPlantName, _
             MODULE_NAME & ".SearchInventory_Click", _
             "Nama manufacturing plant " & _
@@ -178,7 +178,7 @@ Public Sub SearchInventory_Click()
     ' =====================================================
     ' Step 2: Get and validate TableInventory
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateInventoryTableColumns tbl
 
@@ -191,15 +191,15 @@ Public Sub SearchInventory_Click()
                 manufacturingPlantName)
 
     If rs Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetInventory.EmptyInventoryRecordset, _
             MODULE_NAME & ".SearchInventory_Click", _
             "DAO tidak mengembalikan recordset."
     End If
 
     If rs.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.RecordsetNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.RecordsetNotOpen, _
             MODULE_NAME & ".SearchInventory_Click", _
             "Recordset stock inventory " & _
             "tidak terbuka."
@@ -219,19 +219,19 @@ Public Sub SearchInventory_Click()
 
         rowNumber = rowNumber + 1
 
-        currentStock = DatabaseManager.FieldDouble( _
+        currentStock = managerDatabase.FieldDouble( _
             rs, "current_stock")
 
-        reorderPoint = DatabaseManager.FieldDouble( _
+        reorderPoint = managerDatabase.FieldDouble( _
             rs, "reorder_point")
 
-        safetyStock = DatabaseManager.FieldDouble( _
+        safetyStock = managerDatabase.FieldDouble( _
             rs, "safety_stock")
 
-        averageDailyUsage = DatabaseManager.FieldDouble( _
+        averageDailyUsage = managerDatabase.FieldDouble( _
             rs, "average_daily_usage")
 
-        sdDemand = DatabaseManager.FieldDouble( _
+        sdDemand = managerDatabase.FieldDouble( _
             rs, "sd_demand")
 
         inventoryStatus = DetermineInventoryStatus( _
@@ -239,60 +239,60 @@ Public Sub SearchInventory_Click()
             reorderPoint:=reorderPoint, _
             safetyStock:=safetyStock)
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         ' No
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, rowNumber
 
         ' Nama Barang
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CATALOGUE, _
-            DatabaseManager.FieldText(rs, "catalogue_name")
+            managerDatabase.FieldText(rs, "catalogue_name")
 
         ' Satuan
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UOM, _
-            DatabaseManager.FieldText( _
+            managerDatabase.FieldText( _
                 rs, "catalogue_unit_of_measurement")
 
         ' Stock Sekarang
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CURRENT_STOCK, _
             currentStock
 
         ' Reorder Point
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REORDER_POINT, _
             reorderPoint
 
         ' Safety Stock
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_SAFETY_STOCK, _
             safetyStock
 
         ' Lead Time
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_LEADTIME, _
-            DatabaseManager.FieldText(rs, "lead_time")
+            managerDatabase.FieldText(rs, "lead_time")
 
         ' Average Daily Usage
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_AVERAGE_DAILY_USAGE, _
             averageDailyUsage
 
         ' SD Demand
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_SD_DEMAND, _
             sdDemand
 
         ' Status
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_STATUS, _
             inventoryStatus
 
         ' Action
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UPDATE, "UPDATE"
 
         rs.MoveNext
@@ -308,7 +308,7 @@ Public Sub SearchInventory_Click()
     ' =====================================================
     If rowNumber = 0 Then
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data stock inventory untuk " & _
             "manufacturing plant '" & _
             manufacturingPlantName & "'.", _
@@ -316,7 +316,7 @@ Public Sub SearchInventory_Click()
 
     Else
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(rowNumber) & _
             " data stock inventory ditemukan.", _
             "Stock Inventory"
@@ -324,26 +324,26 @@ Public Sub SearchInventory_Click()
     End If
 
 CleanUp:
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set tbl = Nothing
     Set rs = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set tbl = Nothing
     Set rs = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan data stock inventory."
 
 End Sub
@@ -360,21 +360,21 @@ Private Sub ClearInventoryTable( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ClearInventoryTable", _
             "TableInventory belum diinisialisasi."
     End If
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearInventoryTable", _
         "Gagal membersihkan data stock inventory."
 
@@ -440,13 +440,13 @@ Private Sub ApplyInventoryTableFormatting( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ApplyInventoryTableFormatting", _
             "TableInventory belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
@@ -475,7 +475,7 @@ Private Sub ApplyInventoryTableFormatting( _
     ' =====================================================
     For Each columnName In amountColumns
 
-        TableManager.FormatColumn _
+        managerTable.FormatColumn _
             tbl, CStr(columnName), "#,##0.00"
 
     Next columnName
@@ -485,7 +485,7 @@ Private Sub ApplyInventoryTableFormatting( _
     ' =====================================================
     For Each columnName In allColumns
 
-        Set columnRange = TableManager.GetColumnRange( _
+        Set columnRange = managerTable.GetColumnRange( _
             tbl, CStr(columnName))
 
         If Not columnRange Is Nothing Then
@@ -494,10 +494,10 @@ Private Sub ApplyInventoryTableFormatting( _
 
     Next columnName
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_NO, vbNullString, xlCenter
 
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_STATUS)
 
     If Not columnRange Is Nothing Then
@@ -514,7 +514,7 @@ Private Sub ApplyInventoryTableFormatting( _
     ' =====================================================
     ' UPDATE action formatting
     ' =====================================================
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_UPDATE)
 
     If Not columnRange Is Nothing Then
@@ -536,12 +536,12 @@ Private Sub ApplyInventoryTableFormatting( _
     ' =====================================================
     ' Apply status colors
     ' =====================================================
-    For rowIndex = 1 To TableManager.RowCount(tbl)
+    For rowIndex = 1 To managerTable.RowCount(tbl)
 
-        Set statusCell = TableManager.GetCell( _
+        Set statusCell = managerTable.GetCell( _
             tbl, rowIndex, COLUMN_STATUS)
 
-        statusValue = TableManager.GetText( _
+        statusValue = managerTable.GetText( _
             tbl, rowIndex, COLUMN_STATUS)
 
         With statusCell
@@ -584,12 +584,12 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set statusCell = Nothing
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyInventoryTableFormatting", _
         "Gagal menerapkan format tabel inventory."
 
@@ -607,13 +607,13 @@ Private Sub ValidateInventoryTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ValidateInventoryTableColumns", _
             "TableInventory tidak ditemukan."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_NO, _
         COLUMN_CATALOGUE, _
         COLUMN_UOM, _
@@ -629,9 +629,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateInventoryTableColumns", _
         "Struktur TableInventory tidak sesuai."
 
@@ -672,35 +672,35 @@ Private Sub HandleUpdateROP( _
     ' Step 1: Validate table and selected row
     ' =====================================================
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".HandleUpdateROP", _
             "TableInventory belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
-        ErrorManager.ThrowError _
+    If Not managerTable.HasRows(tbl) Then
+        managerError.ThrowError _
             sheetInventory.EmptyInventoryTableData, _
             MODULE_NAME & ".HandleUpdateROP", _
             "TableInventory tidak memiliki data."
     End If
 
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
 
-        ErrorManager.ThrowError _
-            TableManager.InvalidRow, _
+        managerError.ThrowError _
+            managerTable.InvalidRow, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Baris inventory yang dipilih tidak valid."
     End If
 
     If actionCell Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetInventory.EmptyUpdateActionCell, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Cell UPDATE tidak ditemukan."
     End If
 
-    If Not ValidationText.IsSameText( _
+    If Not managerValidationText.IsSameText( _
         TrimText(CStr(actionCell.value)), _
         "UPDATE") Then
 
@@ -710,11 +710,11 @@ Private Sub HandleUpdateROP( _
     ' =====================================================
     ' Step 2: Read manufacturing plant
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_MANUFACTURING_PLANT)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetInventory.EmptyPlantName, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Nama manufacturing plant " & _
@@ -724,21 +724,21 @@ Private Sub HandleUpdateROP( _
     ' =====================================================
     ' Step 3: Read catalogue information
     ' =====================================================
-    catalogueName = TableManager.GetText( _
+    catalogueName = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_CATALOGUE)
 
-    unitOfMeasurement = TableManager.GetText( _
+    unitOfMeasurement = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UOM)
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             sheetInventory.EmptyCatalogueName, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Nama barang tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(unitOfMeasurement) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(unitOfMeasurement) Then
+        managerError.ThrowError _
             sheetInventory.EmptyUnitOfMeasurement, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Satuan barang tidak boleh kosong."
@@ -747,13 +747,13 @@ Private Sub HandleUpdateROP( _
     ' =====================================================
     ' Step 4: Read calculation values
     ' =====================================================
-    averageDailyUsageValue = TableManager.GetValue( _
+    averageDailyUsageValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_AVERAGE_DAILY_USAGE)
 
-    sdDemandValue = TableManager.GetValue( _
+    sdDemandValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_SD_DEMAND)
 
-    leadTimeValue = TableManager.GetValue( _
+    leadTimeValue = managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_LEADTIME)
 
     ' =====================================================
@@ -777,32 +777,32 @@ Private Sub HandleUpdateROP( _
         emptyErrorCode:=sheetInventory.EmptyLeadTime, _
         invalidErrorCode:=sheetInventory.InvalidLeadTime
 
-    averageDailyUsage = TableManager.GetDouble( _
+    averageDailyUsage = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_AVERAGE_DAILY_USAGE)
 
-    sdDemand = TableManager.GetDouble( _
+    sdDemand = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_SD_DEMAND)
 
-    leadTime = TableManager.GetDouble( _
+    leadTime = managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_LEADTIME)
 
-    If ValidationNumeric.IsNegative(averageDailyUsage) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(averageDailyUsage) Then
+        managerError.ThrowError _
             sheetInventory.NegativeAverageDailyUsage, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Average Daily Usage tidak boleh " & _
             "kurang dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(sdDemand) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(sdDemand) Then
+        managerError.ThrowError _
             sheetInventory.NegativeSdDemand, _
             MODULE_NAME & ".HandleUpdateROP", _
             "SD Demand tidak boleh kurang dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(leadTime) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(leadTime) Then
+        managerError.ThrowError _
             sheetInventory.NegativeLeadTime, _
             MODULE_NAME & ".HandleUpdateROP", _
             "Lead Time tidak boleh kurang dari nol."
@@ -878,7 +878,7 @@ Private Sub HandleUpdateROP( _
         vbCrLf & vbCrLf & _
         "Z Score yang digunakan: 1.65"
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Update Inventory") Then
 
@@ -902,7 +902,7 @@ Private Sub HandleUpdateROP( _
         .Interior.Color = RGB(230, 230, 230)
     End With
 
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Memperbarui reorder point dan safety stock...", _
         True
 
@@ -920,11 +920,11 @@ Private Sub HandleUpdateROP( _
     ' =====================================================
     ' Step 10: Update displayed calculated values
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, selectedRowIndex, COLUMN_SAFETY_STOCK, _
         calculatedSafetyStock
 
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, selectedRowIndex, COLUMN_REORDER_POINT, _
         calculatedReorderPoint
 
@@ -941,7 +941,7 @@ Private Sub HandleUpdateROP( _
         .Interior.Color = RGB(0, 128, 0)
     End With
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 11: Show success message
@@ -964,7 +964,7 @@ Private Sub HandleUpdateROP( _
         "Reorder Point: " & _
         Format$(calculatedReorderPoint, "#,##0.00")
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         successMessage, _
         "Update Inventory Berhasil"
 
@@ -974,12 +974,12 @@ Private Sub HandleUpdateROP( _
     SearchInventory_Click
 
 CleanUp:
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If Not actionCell Is Nothing Then
         If actionCellChanged Then
@@ -1000,9 +1000,9 @@ ErrorHandler:
         End If
     End If
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".HandleUpdateROP", _
         "Gagal memperbarui reorder point " & _
         "dan safety stock."
@@ -1021,23 +1021,23 @@ Private Sub ValidateInventoryNumericValue( _
     Dim errInfo As ErrorInfo
 
     If IsError(fieldValue) Then
-        ErrorManager.ThrowError _
-            TableManager.CellContainsError, _
+        managerError.ThrowError _
+            managerTable.CellContainsError, _
             MODULE_NAME & ".ValidateInventoryNumericValue", _
             fieldDescription & _
             " berisi nilai error."
     End If
 
-    If ValidationText.IsBlank(fieldValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(fieldValue) Then
+        managerError.ThrowError _
             emptyErrorCode, _
             MODULE_NAME & ".ValidateInventoryNumericValue", _
             fieldDescription & _
             " tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsNotNumber(fieldValue) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNotNumber(fieldValue) Then
+        managerError.ThrowError _
             invalidErrorCode, _
             MODULE_NAME & ".ValidateInventoryNumericValue", _
             fieldDescription & _
@@ -1048,9 +1048,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateInventoryNumericValue"
 
 End Sub

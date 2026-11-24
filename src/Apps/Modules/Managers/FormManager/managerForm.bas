@@ -1,4 +1,4 @@
-Attribute VB_Name = "FormManager"
+Attribute VB_Name = "managerForm"
 Option Explicit
 
 ' =========================================================
@@ -9,10 +9,10 @@ Option Explicit
 '     status bar) while a button is running
 '   - User messages (info, warning, confirmation)
 '   - Reading / clearing single input cells
-'   - Date picker (FormTanggal)
+'   - Date picker (formTanggal)
 '
-' Excel tables (ListObject) are handled by TableManager.
-' Errors are shown with ErrorManager.ShowError.
+' Excel tables (ListObject) are handled by managerTable.
+' Errors are shown with managerError.ShowError.
 '
 ' Typical button procedure:
 '
@@ -21,23 +21,23 @@ Option Explicit
 '       Dim state As FormState
 '       Dim errInfo As ErrorInfo
 '
-'       state = FormManager.BeginBusy("Menyimpan data...")
+'       state = managerForm.BeginBusy("Menyimpan data...")
 '       ...
 '   CleanUp:
-'       FormManager.EndBusy state
+'       managerForm.EndBusy state
 '       Exit Sub
 '   ErrorHandler:
-'       errInfo = ErrorManager.CaptureError()
-'       FormManager.EndBusy state
-'       ErrorManager.ShowError errInfo
+'       errInfo = managerError.CaptureError()
+'       managerForm.EndBusy state
+'       managerError.ShowError errInfo
 '   End Sub
 ' =========================================================
 
-Private Const MODULE_NAME As String = "FormManager"
+Private Const MODULE_NAME As String = "managerForm"
 
 ' =========================================================
 ' ERROR CODES (10300 - 10399)
-' Usage: ErrorManager.ThrowError FormManager.CellContainsError, ...
+' Usage: managerError.ThrowError managerForm.CellContainsError, ...
 ' =========================================================
 Public Const CellContainsError As Long = 10303      ' input cell holds #N/A, #VALUE!, ...
 Public Const EmptyWorksheet As Long = 10306         ' ws parameter is Nothing
@@ -45,7 +45,7 @@ Public Const EmptyWorksheet As Long = 10306         ' ws parameter is Nothing
 ' =========================================================
 ' DATE PICKER
 '
-' Cell that opened FormTanggal. FormTanggal writes the
+' Cell that opened formTanggal. formTanggal writes the
 ' selected date back to this cell.
 ' =========================================================
 Public CallerCell As Range
@@ -204,7 +204,7 @@ Private Function DefaultTitle( _
     ByVal title As String) As String
 
     If Len(title) = 0 Then
-        DefaultTitle = pConfig.ApplicationName()
+        DefaultTitle = coreConfig.ApplicationName()
     Else
         DefaultTitle = title
     End If
@@ -245,7 +245,7 @@ End Function
 
 
 ' Read a cell as trimmed text.
-' Empty / Null -> "". Error value -> FormManager.CellContainsError.
+' Empty / Null -> "". Error value -> managerForm.CellContainsError.
 Public Function GetCellText( _
     ByVal ws As Worksheet, _
     ByVal cellAddress As String) As String
@@ -255,8 +255,8 @@ Public Function GetCellText( _
     value = GetCellValue(ws, cellAddress)
 
     If IsError(value) Then
-        ErrorManager.ThrowError _
-            FormManager.CellContainsError, _
+        managerError.ThrowError _
+            managerForm.CellContainsError, _
             MODULE_NAME & ".GetCellText", _
             "Cell " & cellAddress & " berisi nilai error."
     End If
@@ -273,10 +273,10 @@ End Function
 ' True when the cell holds a valid date. Does not raise:
 ' the sheet throws its own error code.
 '
-'   If Not FormManager.IsCellDate(Me, CELL_ORDER_DATE) Then
-'       ErrorManager.ThrowError sheetInputOrder.InvalidOrderDate, ...
+'   If Not managerForm.IsCellDate(Me, CELL_ORDER_DATE) Then
+'       managerError.ThrowError sheetInputOrder.InvalidOrderDate, ...
 '   End If
-'   orderDate = DateValue(FormManager.GetCellValue(Me, CELL_ORDER_DATE))
+'   orderDate = DateValue(managerForm.GetCellValue(Me, CELL_ORDER_DATE))
 Public Function IsCellDate( _
     ByVal ws As Worksheet, _
     ByVal cellAddress As String) As Boolean
@@ -287,7 +287,7 @@ Public Function IsCellDate( _
 
     If IsError(value) Then
         IsCellDate = False
-    ElseIf ValidationText.IsBlank(value) Then
+    ElseIf managerValidationText.IsBlank(value) Then
         IsCellDate = False
     Else
         IsCellDate = IsDate(value)
@@ -297,7 +297,7 @@ End Function
 
 
 ' Clear the contents of one or more cells.
-'   FormManager.ClearCells Me, "B4", "B5", "B6"
+'   managerForm.ClearCells Me, "B4", "B5", "B6"
 Public Sub ClearCells( _
     ByVal ws As Worksheet, _
     ParamArray cellAddresses() As Variant)
@@ -314,15 +314,15 @@ End Sub
 
 
 ' =========================================================
-' DATE PICKER (FormTanggal)
+' DATE PICKER (formTanggal)
 ' =========================================================
 
-' Open FormTanggal for the target cell.
+' Open formTanggal for the target cell.
 Public Sub ShowDatePicker( _
     ByVal target As Range)
 
     Set CallerCell = target
-    FormTanggal.Show
+    formTanggal.Show
 
 End Sub
 
@@ -332,7 +332,7 @@ End Sub
 ' while the form is open and always switched on again.
 '
 '   Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-'       FormManager.HandleDatePickerSelection Target, Me.Range("B6")
+'       managerForm.HandleDatePickerSelection Target, Me.Range("B6")
 '   End Sub
 Public Sub HandleDatePickerSelection( _
     ByVal target As Range, _
@@ -360,8 +360,8 @@ Private Sub RequireWorksheet( _
     ByVal errorSource As String)
 
     If ws Is Nothing Then
-        ErrorManager.ThrowError _
-            FormManager.EmptyWorksheet, _
+        managerError.ThrowError _
+            managerForm.EmptyWorksheet, _
             errorSource, _
             "Worksheet tidak boleh kosong."
     End If

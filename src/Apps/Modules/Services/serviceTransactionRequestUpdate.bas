@@ -20,7 +20,7 @@ Private Const MODULE_NAME As String = "SERVICE_TRANSACTION_REQUEST_UPDATE"
 
 ' =========================================================
 ' ERROR CODES (18000 - 18099)
-' Usage: ErrorManager.ThrowError serviceTransactionRequestUpdate.EmptyOriginalUUID, ...
+' Usage: managerError.ThrowError serviceTransactionRequestUpdate.EmptyOriginalUUID, ...
 ' =========================================================
 Public Const EmptyOriginalUUID As Long = 18001
 Public Const EmptyProposedUUID As Long = 18002
@@ -59,13 +59,13 @@ Public Sub CreateRequestUpdate( _
 
     originalUUID = Trim$(originalUUID)
     proposedUUID = Trim$(proposedUUID)
-    requestedBy = Trim$(pConfig.currentUser())
+    requestedBy = Trim$(coreConfig.currentUser())
 
     RequireUUIDPair originalUUID, proposedUUID, _
         MODULE_NAME & ".CreateRequestUpdate"
 
-    If ValidationText.IsBlank(requestedBy) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestedBy) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyRequestedBy, _
             MODULE_NAME & ".CreateRequestUpdate", _
             "User yang meminta perubahan tidak boleh kosong."
@@ -74,8 +74,8 @@ Public Sub CreateRequestUpdate( _
     affected = daoTransactionRequestUpdate.CreateTransactionRequestUpdate( _
         conn, originalUUID, proposedUUID, requestedBy)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.NoRowAffectedCreateRequestUpdate, _
             MODULE_NAME & ".CreateRequestUpdate", _
             "Permintaan perubahan transaksi tidak tersimpan. " & _
@@ -85,9 +85,9 @@ Public Sub CreateRequestUpdate( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateRequestUpdate", _
         "Gagal membuat permintaan perubahan transaksi."
 
@@ -141,8 +141,8 @@ Public Sub ApproveRequestUpdate( _
     RequireUUIDPair originalTransactionUUID, proposedTransactionUUID, _
         MODULE_NAME & ".ApproveRequestUpdate"
 
-    If ValidationText.IsBlank(user) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(user) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyApproverUser, _
             MODULE_NAME & ".ApproveRequestUpdate", _
             "User tidak boleh kosong."
@@ -150,32 +150,32 @@ Public Sub ApproveRequestUpdate( _
 
     If updateStockMovement Then
 
-        If ValidationText.IsBlank(oldCatalogueName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(oldCatalogueName) Then
+            managerError.ThrowError _
                 serviceTransactionRequestUpdate.EmptyOldCatalogueName, _
                 MODULE_NAME & ".ApproveRequestUpdate", _
                 "Nama catalogue original tidak boleh " & _
                 "kosong ketika update stock aktif."
         End If
 
-        If ValidationText.IsBlank(newCatalogueName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(newCatalogueName) Then
+            managerError.ThrowError _
                 serviceTransactionRequestUpdate.EmptyNewCatalogueName, _
                 MODULE_NAME & ".ApproveRequestUpdate", _
                 "Nama catalogue proposed tidak boleh " & _
                 "kosong ketika update stock aktif."
         End If
 
-        If ValidationText.IsBlank(oldManufacturingPlantName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(oldManufacturingPlantName) Then
+            managerError.ThrowError _
                 serviceTransactionRequestUpdate.EmptyOldManufacturingPlantName, _
                 MODULE_NAME & ".ApproveRequestUpdate", _
                 "Nama manufacturing plant original " & _
                 "tidak boleh kosong ketika update stock aktif."
         End If
 
-        If ValidationText.IsBlank(newManufacturingPlantName) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(newManufacturingPlantName) Then
+            managerError.ThrowError _
                 serviceTransactionRequestUpdate.EmptyNewManufacturingPlantName, _
                 MODULE_NAME & ".ApproveRequestUpdate", _
                 "Nama manufacturing plant proposed " & _
@@ -204,9 +204,9 @@ Public Sub ApproveRequestUpdate( _
     ' =====================================================
     ' Step 3: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -215,8 +215,8 @@ Public Sub ApproveRequestUpdate( _
     affected = daoTransactionRequestUpdate.ApproveRequestUpdate( _
         conn, originalTransactionUUID, proposedTransactionUUID, user)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.NoRowAffectedApproveRequestUpdate, _
             MODULE_NAME & ".ApproveRequestUpdate", _
             "Pengajuan update tidak disetujui. " & _
@@ -224,8 +224,8 @@ Public Sub ApproveRequestUpdate( _
             "atau tier user tidak memenuhi persyaratan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.MultipleRowsAffectedApproveRequestUpdate, _
             MODULE_NAME & ".ApproveRequestUpdate", _
             "Lebih dari satu pengajuan update " & _
@@ -257,8 +257,8 @@ Public Sub ApproveRequestUpdate( _
     If updateStockMovement Then
 
         isSameStockRecord = _
-            ValidationText.IsSameText(oldCatalogueName, newCatalogueName) And _
-            ValidationText.IsSameText(oldManufacturingPlantName, newManufacturingPlantName)
+            managerValidationText.IsSameText(oldCatalogueName, newCatalogueName) And _
+            managerValidationText.IsSameText(oldManufacturingPlantName, newManufacturingPlantName)
 
         servicePlantStock.RecalculateStock _
             conn, oldCatalogueName, oldManufacturingPlantName
@@ -279,19 +279,19 @@ Public Sub ApproveRequestUpdate( _
     ' =====================================================
     ' Step 9: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApproveRequestUpdate", _
         "Gagal menyetujui pengajuan update."
 
@@ -314,7 +314,7 @@ Public Function SelectOrderRequestUpdate( _
     RequireSearchParameters manufacturingPlantName, fromDate, untilDate, _
         MODULE_NAME & ".SelectOrderRequestUpdate"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectOrderRequestUpdate = daoUpdateOrder.SelectOrderRequestUpdate( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -322,9 +322,9 @@ Public Function SelectOrderRequestUpdate( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectOrderRequestUpdate", _
         "Gagal mengambil data pengajuan update order."
 
@@ -347,7 +347,7 @@ Public Function SelectReceiveRequestUpdate( _
     RequireSearchParameters manufacturingPlantName, fromDate, untilDate, _
         MODULE_NAME & ".SelectReceiveRequestUpdate"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectReceiveRequestUpdate = daoUpdateReceive.SelectReceiveRequestUpdate( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -355,9 +355,9 @@ Public Function SelectReceiveRequestUpdate( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectReceiveRequestUpdate", _
         "Gagal mengambil pengajuan update penerimaan."
 
@@ -381,7 +381,7 @@ Public Function SelectRequestRequestUpdate( _
     RequireSearchParameters manufacturingPlantName, fromDate, untilDate, _
         MODULE_NAME & ".SelectRequestRequestUpdate"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectRequestRequestUpdate = daoUpdateRequest.SelectRequestRequestUpdate( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -389,9 +389,9 @@ Public Function SelectRequestRequestUpdate( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectRequestRequestUpdate", _
         "Gagal mengambil pengajuan update request."
 
@@ -407,22 +407,22 @@ Private Sub RequireUUIDPair( _
     ByVal proposedUUID As String, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(originalUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(originalUUID) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyOriginalUUID, _
             errorSource, _
             "UUID transaksi original tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(proposedUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(proposedUUID) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyProposedUUID, _
             errorSource, _
             "UUID transaksi proposed tidak boleh kosong."
     End If
 
-    If ValidationText.IsSameText(originalUUID, proposedUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsSameText(originalUUID, proposedUUID) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.SameOriginalProposedUUID, _
             errorSource, _
             "UUID transaksi original dan proposed tidak boleh sama."
@@ -437,29 +437,29 @@ Private Sub RequireSearchParameters( _
     ByVal untilDate As Date, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyManufacturingPlantName, _
             errorSource, _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(fromDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(fromDate) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyFromDate, _
             errorSource, _
             "Tanggal awal tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(untilDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(untilDate) Then
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.EmptyUntilDate, _
             errorSource, _
             "Tanggal akhir tidak boleh kosong."
     End If
 
     If DateValue(untilDate) < DateValue(fromDate) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceTransactionRequestUpdate.InvalidDateRange, _
             errorSource, _
             "Tanggal akhir tidak boleh lebih kecil dari tanggal awal."

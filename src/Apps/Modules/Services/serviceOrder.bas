@@ -14,7 +14,7 @@ Private Const MODULE_NAME As String = "SERVICE_ORDER"
 
 ' =========================================================
 ' ERROR CODES (17400 - 17499)
-' Usage: ErrorManager.ThrowError serviceOrder.EmptyOrder, ...
+' Usage: managerError.ThrowError serviceOrder.EmptyOrder, ...
 ' =========================================================
 Public Const EmptyOrder As Long = 17401                     ' Order object is Nothing
 Public Const EmptyTransactionUUID As Long = 17402           ' CreateTransaction returned no UUID
@@ -59,7 +59,7 @@ Public Sub CreateOrder( _
     ' Step 1: Validate
     ' =====================================================
     If orderItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceOrder.EmptyOrder, _
             MODULE_NAME & ".CreateOrder", _
             "Order tidak boleh kosong."
@@ -71,9 +71,9 @@ Public Sub CreateOrder( _
     ' =====================================================
     ' Step 2: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -93,16 +93,16 @@ Public Sub CreateOrder( _
 
     transactionUUID = Trim$(transactionUUID)
 
-    If ValidationText.IsBlank(transactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
             serviceOrder.EmptyTransactionUUID, _
             MODULE_NAME & ".CreateOrder", _
             "UUID transaksi order tidak berhasil dibuat."
     End If
 
     If isCreatedForUpdate Then
-        If ValidationText.IsSameText(originalUUID, transactionUUID) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsSameText(originalUUID, transactionUUID) Then
+            managerError.ThrowError _
                 serviceOrder.SameOriginalProposedUUID, _
                 MODULE_NAME & ".CreateOrder", _
                 "UUID transaksi original dan proposed " & _
@@ -115,8 +115,8 @@ Public Sub CreateOrder( _
     ' =====================================================
     affected = daoOrder.CreateOrder(conn, transactionUUID, orderItem)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceOrder.NoRowAffectedCreateOrder, _
             MODULE_NAME & ".CreateOrder", _
             "Order tidak tersimpan (0 baris terpengaruh)."
@@ -155,19 +155,19 @@ Public Sub CreateOrder( _
     ' =====================================================
     ' Step 7: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateOrder", _
         "Gagal membuat order."
 
@@ -191,7 +191,7 @@ Public Function SelectOrder( _
     RequireSearchParameters manufacturingPlantName, fromDate, untilDate, _
         MODULE_NAME & ".SelectOrder"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectOrder = daoOrder.SelectOrder( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -199,9 +199,9 @@ Public Function SelectOrder( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectOrder", _
         "Gagal mengambil data order dan penerimaan."
 
@@ -225,7 +225,7 @@ Public Function SelectPendingOrder( _
     RequireSearchParameters manufacturingPlantName, fromDate, untilDate, _
         MODULE_NAME & ".SelectPendingOrder"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectPendingOrder = daoOrder.SelectPendingOrder( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -233,9 +233,9 @@ Public Function SelectPendingOrder( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectPendingOrder", _
         "Gagal mengambil data order dan penerimaan."
 
@@ -263,15 +263,15 @@ Public Sub UpdateOrderPOID( _
     ' =====================================================
     ' Step 1: Validate
     ' =====================================================
-    If ValidationText.IsBlank(orderUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(orderUUID) Then
+        managerError.ThrowError _
             serviceOrder.EmptyOrderUUID, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "UUID order tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(poID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(poID) Then
+        managerError.ThrowError _
             serviceOrder.EmptyPoId, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "PO ID tidak boleh kosong."
@@ -280,9 +280,9 @@ Public Sub UpdateOrderPOID( _
     ' =====================================================
     ' Step 2: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -290,8 +290,8 @@ Public Sub UpdateOrderPOID( _
     ' =====================================================
     affected = daoOrder.UpdateOrderPOID(conn, orderUUID, poID)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceOrder.NoRowAffectedUpdatePoId, _
             MODULE_NAME & ".UpdateOrderPOID", _
             "PO ID order tidak tersimpan (0 baris terpengaruh)."
@@ -308,19 +308,19 @@ Public Sub UpdateOrderPOID( _
     ' =====================================================
     ' Step 5: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".UpdateOrderPOID", _
         "Gagal memperbarui PO ID order."
 
@@ -337,15 +337,15 @@ Private Sub RequireSearchParameters( _
     ByVal untilDate As Date, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceOrder.EmptyManufacturingPlantName, _
             errorSource, _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
     If DateValue(untilDate) < DateValue(fromDate) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceOrder.InvalidDateRange, _
             errorSource, _
             "Tanggal akhir tidak boleh lebih kecil dari tanggal awal."

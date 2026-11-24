@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - ORDER
 ' Table      : orders (+ progress columns of vw_order_progress)
-' Error codes: entitiesOrder (ErrorCodesEntities.bas)
+' Error codes: entitiesOrder (managerErrorCodesEntities.bas)
 '
 ' Detail of an ORDER transaction - spareparts ordered from a
 ' vendor. The document number (UUID) and the plant live on
@@ -57,8 +57,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -80,7 +80,7 @@ End Property
 Public Property Set Transaction(ByVal value As Transaction)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesOrder.EmptyTransaction, _
             CLASS_NAME & ".Transaction", _
             CLASS_NAME & ": Transaksi tidak boleh kosong."
@@ -88,7 +88,7 @@ Public Property Set Transaction(ByVal value As Transaction)
 
     If Len(value.TransactionType) > 0 Then
         If value.TransactionType <> TRANSACTION_TYPE Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesOrder.WrongTransactionType, _
                 CLASS_NAME & ".Transaction", _
                 CLASS_NAME & ": Tipe transaksi harus " & _
@@ -111,7 +111,7 @@ End Property
 Public Property Set Sparepart(ByVal value As Sparepart)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesOrder.EmptySparepart, _
             CLASS_NAME & ".Sparepart", _
             CLASS_NAME & ": Sparepart tidak boleh kosong."
@@ -152,8 +152,8 @@ Public Property Let PoNumber(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsLongerThan(value, PO_NUMBER_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, PO_NUMBER_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesOrder.PoNumberTooLong, _
             CLASS_NAME & ".PoNumber", _
             CLASS_NAME & ": Nomor PO maksimal " & _
@@ -178,15 +178,15 @@ End Property
 
 Public Property Let OrderDate(ByVal value As Date)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.EmptyOrderDate, _
             CLASS_NAME & ".OrderDate", _
             CLASS_NAME & ": Tanggal order tidak boleh kosong."
     End If
 
     If DateValue(value) > VBA.Date Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesOrder.FutureOrderDate, _
             CLASS_NAME & ".OrderDate", _
             CLASS_NAME & ": Tanggal order tidak boleh berada di masa depan."
@@ -206,8 +206,8 @@ End Property
 
 Public Property Let Quantity(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.InvalidQuantity, _
             CLASS_NAME & ".Quantity", _
             CLASS_NAME & ": Jumlah order harus lebih besar dari 0."
@@ -249,15 +249,15 @@ Public Property Let PersonInCharge(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsBlank(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(value) Then
+        managerError.ThrowError _
             entitiesOrder.EmptyPersonInCharge, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge tidak boleh kosong."
     End If
 
-    If ValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesOrder.PersonInChargeTooLong, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge maksimal " & _
@@ -280,8 +280,8 @@ End Property
 
 Public Property Let OkQuantityTotal(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.NegativeOkQuantityTotal, _
             CLASS_NAME & ".OkQuantityTotal", _
             CLASS_NAME & ": Total barang OK tidak boleh negatif."
@@ -297,8 +297,8 @@ End Property
 
 Public Property Let ReceivedQuantityTotal(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.NegativeReceivedQuantityTotal, _
             CLASS_NAME & ".ReceivedQuantityTotal", _
             CLASS_NAME & ": Total penerimaan tidak boleh negatif."
@@ -314,8 +314,8 @@ End Property
 
 Public Property Let RemainingQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesOrder.NegativeRemainingQuantity, _
             CLASS_NAME & ".RemainingQuantity", _
             CLASS_NAME & ": Sisa jumlah order tidak boleh negatif."
@@ -323,7 +323,7 @@ Public Property Let RemainingQuantity(ByVal value As Long)
 
     If mQuantity > 0 Then
         If value > mQuantity Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesOrder.RemainingQuantityExceedsQuantity, _
                 CLASS_NAME & ".RemainingQuantity", _
                 CLASS_NAME & _
@@ -344,10 +344,10 @@ Public Property Let Status(ByVal value As String)
 
     value = UCase$(Trim$(value))
 
-    If Not ValidationText.IsInList(value, _
+    If Not managerValidationText.IsInList(value, _
         Array("BELUM DATANG", "DATANG SEBAGIAN", "DATANG SEMUA")) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesOrder.InvalidStatus, _
             CLASS_NAME & ".Status", _
             CLASS_NAME & _

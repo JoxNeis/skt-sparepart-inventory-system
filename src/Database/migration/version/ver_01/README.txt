@@ -1,6 +1,6 @@
 SPAREPART INVENTORY SYSTEM - DATABASE MIGRATION
 Version 1 - initial_schema
-Generated 2026-11-24 11:09
+Generated 2026-11-24 15:08
 
 Files
   migrationInit.bas     starts the migration (RunMigration)

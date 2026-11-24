@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_MOBILE_POST"
 
 ' =========================================================
 ' ERROR CODES (17300 - 17399)
-' Usage: ErrorManager.ThrowError serviceMobilePost.EmptyMobilePostObject, ...
+' Usage: managerError.ThrowError serviceMobilePost.EmptyMobilePostObject, ...
 ' =========================================================
 Public Const EmptyManufacturingPlantName As Long = 17301
 Public Const EmptyRecordsetMobilePostName As Long = 17302         ' query returned a blank mobile post name
@@ -47,8 +47,8 @@ Public Function SelectMobilePostByManufacturingPlantName( _
     ' =====================================================
     ' Step 1: Parameter validation
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceMobilePost.EmptyManufacturingPlantName, _
             MODULE_NAME & ".SelectMobilePostByManufacturingPlantName", _
             "Nama manufacturing plant " & _
@@ -58,7 +58,7 @@ Public Function SelectMobilePostByManufacturingPlantName( _
     ' =====================================================
     ' Step 2: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set mobilePosts = daoMobilePost.SelectMobilePostByManufacturingPlantName( _
         conn, manufacturingPlantName)
@@ -68,8 +68,8 @@ Public Function SelectMobilePostByManufacturingPlantName( _
     ' =====================================================
     For Each mobilePostItem In mobilePosts
 
-        If ValidationText.IsBlank(mobilePostItem.Name) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(mobilePostItem.Name) Then
+            managerError.ThrowError _
                 serviceMobilePost.EmptyRecordsetMobilePostName, _
                 MODULE_NAME & ".SelectMobilePostByManufacturingPlantName", _
                 "Query mengembalikan nama mobile post " & _
@@ -83,9 +83,9 @@ Public Function SelectMobilePostByManufacturingPlantName( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectMobilePostByManufacturingPlantName", _
         "Gagal mengambil daftar mobile post."
 
@@ -118,14 +118,14 @@ Public Sub CreateMobilePost( _
     ' Step 1: Validate MobilePost object
     ' =====================================================
     If mobilePostItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostObject, _
             MODULE_NAME & ".CreateMobilePost", _
             "Objek MobilePost tidak boleh kosong."
     End If
 
     If mobilePostItem.Plant Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostPlant, _
             MODULE_NAME & ".CreateMobilePost", _
             "Manufacturing plant pada MobilePost " & _
@@ -142,23 +142,23 @@ Public Sub CreateMobilePost( _
     ' =====================================================
     ' Step 3: Validate property values
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceMobilePost.EmptyManufacturingPlantName, _
             MODULE_NAME & ".CreateMobilePost", _
             "Nama manufacturing plant " & _
             "tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(mobilePostName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(mobilePostName) Then
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostName, _
             MODULE_NAME & ".CreateMobilePost", _
             "Nama mobile post tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(mobilePostCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(mobilePostCode) Then
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostCode, _
             MODULE_NAME & ".CreateMobilePost", _
             "Kode mobile post tidak boleh kosong."
@@ -167,10 +167,10 @@ Public Sub CreateMobilePost( _
     ' =====================================================
     ' Step 4: Determine current user
     ' =====================================================
-    currentUser = Trim$(pConfig.currentUser())
+    currentUser = Trim$(coreConfig.currentUser())
 
-    If ValidationText.IsBlank(currentUser) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(currentUser) Then
+        managerError.ThrowError _
             serviceMobilePost.EmptyCurrentUser, _
             MODULE_NAME & ".CreateMobilePost", _
             "User yang membuat mobile post " & _
@@ -180,9 +180,9 @@ Public Sub CreateMobilePost( _
     ' =====================================================
     ' Step 5: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -193,8 +193,8 @@ Public Sub CreateMobilePost( _
     ' =====================================================
     ' Step 7: Validate affected records
     ' =====================================================
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceMobilePost.NoRowAffectedCreateMobilePost, _
             MODULE_NAME & ".CreateMobilePost", _
             "Mobile post tidak berhasil dibuat." & _
@@ -204,8 +204,8 @@ Public Sub CreateMobilePost( _
             "sudah digunakan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceMobilePost.MultipleRowsAffectedCreateMobilePost, _
             MODULE_NAME & ".CreateMobilePost", _
             "Pembuatan mobile post memengaruhi " & _
@@ -229,19 +229,19 @@ Public Sub CreateMobilePost( _
     ' =====================================================
     ' Step 10: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateMobilePost", _
         "Gagal membuat data mobile post."
 
@@ -261,14 +261,14 @@ Private Function BuildMobilePostCreateDetail( _
     Dim errInfo As ErrorInfo
 
     If mobilePostItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostObject, _
             MODULE_NAME & ".BuildMobilePostCreateDetail", _
             "Objek MobilePost tidak boleh kosong."
     End If
 
     If mobilePostItem.Plant Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceMobilePost.EmptyMobilePostPlant, _
             MODULE_NAME & ".BuildMobilePostCreateDetail", _
             "Manufacturing plant pada MobilePost " & _
@@ -284,9 +284,9 @@ Private Function BuildMobilePostCreateDetail( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".BuildMobilePostCreateDetail"
 
 End Function

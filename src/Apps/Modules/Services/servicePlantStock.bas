@@ -20,7 +20,7 @@ Private Const SAFETY_STOCK_Z_SCORE As Double = 1.65
 
 ' =========================================================
 ' ERROR CODES (17500 - 17599)
-' Usage: ErrorManager.ThrowError servicePlantStock.ZeroStockChanges, ...
+' Usage: managerError.ThrowError servicePlantStock.ZeroStockChanges, ...
 ' =========================================================
 Public Const ZeroStockChanges As Long = 17501
 Public Const EmptyCatalogueName As Long = 17502
@@ -53,7 +53,7 @@ Public Function SelectManufacturingPlantStocks( _
     RequirePlantName manufacturingPlantName, _
         MODULE_NAME & ".SelectManufacturingPlantStocks"
 
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectManufacturingPlantStocks = _
         daoPlantStock.SelectManufacturingPlantStocks( _
@@ -62,9 +62,9 @@ Public Function SelectManufacturingPlantStocks( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectManufacturingPlantStocks", _
         "Gagal mengambil data stok manufacturing plant."
 
@@ -93,22 +93,22 @@ Public Sub UpdateROP( _
     ' =====================================================
     ' Step 1: Validate
     ' =====================================================
-    If ValidationNumeric.IsNegative(averageDailyUsage) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(averageDailyUsage) Then
+        managerError.ThrowError _
             servicePlantStock.NegativeAverageDailyUsage, _
             MODULE_NAME & ".UpdateROP", _
             "Average daily usage tidak boleh kurang dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(sdDemand) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(sdDemand) Then
+        managerError.ThrowError _
             servicePlantStock.NegativeSdDemand, _
             MODULE_NAME & ".UpdateROP", _
             "SD demand tidak boleh kurang dari nol."
     End If
 
-    If ValidationNumeric.IsNegative(leadTime) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(leadTime) Then
+        managerError.ThrowError _
             servicePlantStock.NegativeLeadTime, _
             MODULE_NAME & ".UpdateROP", _
             "Lead time tidak boleh kurang dari nol."
@@ -120,9 +120,9 @@ Public Sub UpdateROP( _
     ' =====================================================
     ' Step 2: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -132,8 +132,8 @@ Public Sub UpdateROP( _
         conn, averageDailyUsage, sdDemand, leadTime, _
         catalogueName, manufacturingPlantName)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             servicePlantStock.NoRowAffectedUpdateROP, _
             MODULE_NAME & ".UpdateROP", _
             "ROP tidak diperbarui. Data stock untuk " & _
@@ -142,8 +142,8 @@ Public Sub UpdateROP( _
             manufacturingPlantName & "' tidak ditemukan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             servicePlantStock.MultipleRowsAffectedUpdateROP, _
             MODULE_NAME & ".UpdateROP", _
             "Pembaruan ROP memengaruhi lebih dari " & _
@@ -163,19 +163,19 @@ Public Sub UpdateROP( _
     ' =====================================================
     ' Step 5: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".UpdateROP", _
         "Gagal memperbarui reorder point dan safety stock."
 
@@ -202,8 +202,8 @@ Public Sub ApplyStockChange( _
     catalogueName = Trim$(catalogueName)
     manufacturingPlantName = Trim$(manufacturingPlantName)
 
-    If ValidationNumeric.IsZero(stockChanges) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZero(stockChanges) Then
+        managerError.ThrowError _
             servicePlantStock.ZeroStockChanges, _
             MODULE_NAME & ".ApplyStockChange", _
             "Perubahan stok tidak boleh nol."
@@ -220,9 +220,9 @@ Public Sub ApplyStockChange( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyStockChange", _
         "Gagal memperbarui stok saat ini."
 
@@ -263,9 +263,9 @@ Public Sub RecalculateStock( _
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".RecalculateStock", _
         "Gagal memperbarui stok secara tepat."
 
@@ -280,8 +280,8 @@ Private Sub RequireCatalogueName( _
     ByVal catalogueName As String, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             servicePlantStock.EmptyCatalogueName, _
             errorSource, _
             "Nama catalogue tidak boleh kosong."
@@ -294,8 +294,8 @@ Private Sub RequirePlantName( _
     ByVal manufacturingPlantName As String, _
     ByVal errorSource As String)
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             servicePlantStock.EmptyManufacturingPlantName, _
             errorSource, _
             "Nama manufacturing plant tidak boleh kosong."
@@ -308,8 +308,8 @@ Private Sub RequireSingleStockRow( _
     ByVal affected As Long, _
     ByVal errorSource As String)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             servicePlantStock.NoRowAffectedUpdateStock, _
             errorSource, _
             "Stok tidak diperbarui. Data stok untuk " & _
@@ -317,8 +317,8 @@ Private Sub RequireSingleStockRow( _
             "tidak ditemukan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             servicePlantStock.MultipleRowsAffectedUpdateStock, _
             errorSource, _
             "Pembaruan stok memengaruhi lebih dari satu baris."

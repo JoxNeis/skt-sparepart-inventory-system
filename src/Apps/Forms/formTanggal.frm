@@ -1,4 +1,4 @@
-Attribute VB_Name = "FormTanggal"
+Attribute VB_Name = "formTanggal"
 Attribute VB_Base = "0{7277BBC4-838C-4530-9271-89B15597794E}{43BF3E1D-BD70-4CF7-976E-24C0273D7A27}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
@@ -36,11 +36,11 @@ Private Sub UserForm_Initialize()
         ComboBoxTahun.AddItem CStr(i)
     Next i
 
-    If Not FormManager.CallerCell Is Nothing Then
+    If Not managerForm.CallerCell Is Nothing Then
 
-        If IsDate(FormManager.CallerCell.value) Then
+        If IsDate(managerForm.CallerCell.value) Then
 
-            dt = CDate(FormManager.CallerCell.value)
+            dt = CDate(managerForm.CallerCell.value)
 
             ComboBoxBulan.ListIndex = Month(dt) - 1
             ComboBoxTahun.value = Year(dt)
@@ -119,17 +119,17 @@ Private Sub buttonInput_Click()
     Dim bulan As Long
 
     If ComboBoxTanggal.ListIndex = -1 Then
-        FormManager.ShowWarning "Pilih tanggal."
+        managerForm.ShowWarning "Pilih tanggal."
         Exit Sub
     End If
 
     If ComboBoxBulan.ListIndex = -1 Then
-        FormManager.ShowWarning "Pilih bulan."
+        managerForm.ShowWarning "Pilih bulan."
         Exit Sub
     End If
 
     If ComboBoxTahun.ListIndex = -1 Then
-        FormManager.ShowWarning "Pilih tahun."
+        managerForm.ShowWarning "Pilih tahun."
         Exit Sub
     End If
 
@@ -140,12 +140,12 @@ Private Sub buttonInput_Click()
         bulan, _
         CLng(ComboBoxTanggal.value))
 
-    If Not FormManager.CallerCell Is Nothing Then
+    If Not managerForm.CallerCell Is Nothing Then
 
-        FormManager.CallerCell.value = dt
+        managerForm.CallerCell.value = dt
 
         ' Excel tetap menyimpan sebagai Date
-        FormManager.CallerCell.NumberFormat = "dd-mmm-yyyy"
+        managerForm.CallerCell.NumberFormat = "dd-mmm-yyyy"
 
     End If
 

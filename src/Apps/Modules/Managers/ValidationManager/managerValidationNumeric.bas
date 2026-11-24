@@ -1,4 +1,4 @@
-Attribute VB_Name = "ValidationNumeric"
+Attribute VB_Name = "managerValidationNumeric"
 Option Explicit
 
 ' =========================================================
@@ -7,8 +7,8 @@ Option Explicit
 ' Every function returns a Boolean and never raises an
 ' error. The caller decides what to do with the result:
 '
-'   If ValidationNumeric.IsNegative(value) Then
-'       ErrorManager.ThrowError _
+'   If managerValidationNumeric.IsNegative(value) Then
+'       managerError.ThrowError _
 '           entitiesReceive.NegativeOkAmount, _
 '           CLASS_NAME & ".OKAmount", _
 '           "Jumlah barang OK tidak boleh negatif."

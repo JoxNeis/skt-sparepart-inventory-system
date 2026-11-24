@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_RECEIVE"
 
 ' =========================================================
 ' ERROR CODES (17600 - 17699)
-' Usage: ErrorManager.ThrowError serviceReceive.EmptyReceive, ...
+' Usage: managerError.ThrowError serviceReceive.EmptyReceive, ...
 ' =========================================================
 Public Const EmptyReceive As Long = 17601                       ' Receive object is Nothing
 Public Const EmptyOrderTransactionUUID As Long = 17602
@@ -60,7 +60,7 @@ Public Sub CreateReceive( _
     ' Step 1: Validate
     ' =====================================================
     If receiveItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceReceive.EmptyReceive, _
             MODULE_NAME & ".CreateReceive", _
             "Receive tidak boleh kosong."
@@ -71,8 +71,8 @@ Public Sub CreateReceive( _
 
     isCreatedForUpdate = (Len(originalUUID) > 0)
 
-    If ValidationText.IsBlank(orderTransactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(orderTransactionUUID) Then
+        managerError.ThrowError _
             serviceReceive.EmptyOrderTransactionUUID, _
             MODULE_NAME & ".CreateReceive", _
             "UUID transaksi order tidak boleh kosong."
@@ -81,7 +81,7 @@ Public Sub CreateReceive( _
     If receiveItem.totalReceiveAmount <> _
         receiveItem.okAmount + receiveItem.notOKAmount Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceReceive.InvalidTotalReceiveAmount, _
             MODULE_NAME & ".CreateReceive", _
             "Total penerimaan harus sama dengan jumlah OK " & _
@@ -91,9 +91,9 @@ Public Sub CreateReceive( _
     ' =====================================================
     ' Step 2: Begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -113,16 +113,16 @@ Public Sub CreateReceive( _
 
     transactionUUID = Trim$(transactionUUID)
 
-    If ValidationText.IsBlank(transactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
             serviceReceive.EmptyTransactionUUID, _
             MODULE_NAME & ".CreateReceive", _
             "UUID transaksi receive tidak berhasil dibuat."
     End If
 
     If isCreatedForUpdate Then
-        If ValidationText.IsSameText(originalUUID, transactionUUID) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsSameText(originalUUID, transactionUUID) Then
+            managerError.ThrowError _
                 serviceReceive.SameOriginalProposedUUID, _
                 MODULE_NAME & ".CreateReceive", _
                 "UUID transaksi original dan proposed " & _
@@ -136,8 +136,8 @@ Public Sub CreateReceive( _
     affected = daoReceive.CreateReceive( _
         conn, transactionUUID, orderTransactionUUID, receiveItem)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceReceive.NoRowAffectedCreateReceive, _
             MODULE_NAME & ".CreateReceive", _
             "Penerimaan tidak tersimpan. " & _
@@ -145,8 +145,8 @@ Public Sub CreateReceive( _
             "tidak ditemukan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceReceive.MultipleRowsAffectedCreateReceive, _
             MODULE_NAME & ".CreateReceive", _
             "Lebih dari satu data penerimaan tersimpan. " & _
@@ -189,19 +189,19 @@ Public Sub CreateReceive( _
     ' =====================================================
     ' Step 7: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateReceive", _
         "Gagal membuat data penerimaan."
 
@@ -225,29 +225,29 @@ Public Function SelectReceives( _
     ' =====================================================
     ' Step 1: Validate
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceReceive.EmptyManufacturingPlantName, _
             MODULE_NAME & ".SelectReceives", _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(fromDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(fromDate) Then
+        managerError.ThrowError _
             serviceReceive.EmptyFromDate, _
             MODULE_NAME & ".SelectReceives", _
             "Tanggal awal tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(untilDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(untilDate) Then
+        managerError.ThrowError _
             serviceReceive.EmptyUntilDate, _
             MODULE_NAME & ".SelectReceives", _
             "Tanggal akhir tidak boleh kosong."
     End If
 
     If DateValue(untilDate) < DateValue(fromDate) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceReceive.InvalidDateRange, _
             MODULE_NAME & ".SelectReceives", _
             "Tanggal akhir tidak boleh lebih kecil dari tanggal awal."
@@ -256,7 +256,7 @@ Public Function SelectReceives( _
     ' =====================================================
     ' Step 2: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectReceives = daoReceive.SelectReceives( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -264,9 +264,9 @@ Public Function SelectReceives( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectReceives", _
         "Gagal mengambil data penerimaan."
 
@@ -291,15 +291,15 @@ Public Function SelectPendingOrderReceive( _
     ' =====================================================
     ' Step 1: Validate
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceReceive.EmptyManufacturingPlantName, _
             MODULE_NAME & ".SelectPendingOrderReceive", _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
     If DateValue(untilDate) < DateValue(fromDate) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceReceive.InvalidDateRange, _
             MODULE_NAME & ".SelectPendingOrderReceive", _
             "Tanggal akhir tidak boleh lebih kecil dari tanggal awal."
@@ -308,7 +308,7 @@ Public Function SelectPendingOrderReceive( _
     ' =====================================================
     ' Step 2: Query
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set SelectPendingOrderReceive = daoReceive.SelectPendingOrderReceive( _
         conn, manufacturingPlantName, DateValue(fromDate), DateValue(untilDate))
@@ -316,9 +316,9 @@ Public Function SelectPendingOrderReceive( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".SelectPendingOrderReceive", _
         "Gagal mengambil data order dan penerimaan."
 

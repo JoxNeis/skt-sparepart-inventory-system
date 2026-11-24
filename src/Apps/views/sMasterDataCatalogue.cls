@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetMasterDataCatalogue (ErrorCodesSheets.bas)
+' Error codes: sheetMasterDataCatalogue (managerErrorCodesSheets.bas)
 
 Private Const MODULE_NAME As String = _
     "SHEET_MASTER_CATALOGUE"
@@ -57,13 +57,13 @@ Public Sub RefreshCatalogues_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data katalog...")
 
     ' =====================================================
     ' Step 1: Get and validate TableCatalogues
     ' =====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     ValidateCatalogueTableColumns tbl
 
@@ -73,7 +73,7 @@ Public Sub RefreshCatalogues_Click()
     Set catalogues = serviceCatalogue.GetAllCatalogues()
 
     If catalogues Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataCatalogue.NullCatalogueCollection, _
             MODULE_NAME & ".RefreshCatalogues_Click", _
             "DAO tidak mengembalikan collection katalog."
@@ -96,7 +96,7 @@ Public Sub RefreshCatalogues_Click()
         rowNumber = rowNumber + 1
 
         If catalogueItem Is Nothing Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 sheetMasterDataCatalogue.NullCatalogueInCollection, _
                 MODULE_NAME & ".RefreshCatalogues_Click", _
                 "Objek Catalogue pada indeks " & _
@@ -104,7 +104,7 @@ Public Sub RefreshCatalogues_Click()
                 " tidak berhasil dibaca."
         End If
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         WriteCatalogueTableRow _
             tbl:=tbl, _
@@ -118,20 +118,20 @@ Public Sub RefreshCatalogues_Click()
     ' =====================================================
     ApplyCatalogueTableFormatting tbl
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 6: Show result
     ' =====================================================
     If catalogueCount = 0 Then
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada data katalog yang ditemukan.", _
             "Master Data Katalog"
 
     Else
 
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(catalogueCount) & _
             " data katalog berhasil ditampilkan.", _
             "Master Data Katalog"
@@ -143,20 +143,20 @@ CleanUp:
     Set catalogues = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set catalogueItem = Nothing
     Set catalogues = Nothing
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan master data katalog."
 
 End Sub
@@ -175,21 +175,21 @@ Private Sub WriteCatalogueTableRow( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".WriteCatalogueTableRow", _
             "TableCatalogues belum diinisialisasi."
     End If
 
-    If Not TableManager.IsValidRow(tbl, rowIndex) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidRow, _
+    If Not managerTable.IsValidRow(tbl, rowIndex) Then
+        managerError.ThrowError _
+            managerTable.InvalidRow, _
             MODULE_NAME & ".WriteCatalogueTableRow", _
             "Target row katalog belum diinisialisasi."
     End If
 
     If catalogueItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueItem, _
             MODULE_NAME & ".WriteCatalogueTableRow", _
             "Objek Catalogue tidak boleh kosong."
@@ -198,46 +198,46 @@ Private Sub WriteCatalogueTableRow( _
     ' =====================================================
     ' A: Id
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_ID, catalogueItem.Id
 
     ' =====================================================
     ' B: Nama
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_NAME, catalogueItem.Name
 
     ' =====================================================
     ' C: Alias
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_ALIAS, catalogueItem.Alias
 
     ' =====================================================
     ' D: Kode
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_CODE, catalogueItem.Code
 
     ' =====================================================
     ' E: Kategori
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_CATEGORY, catalogueItem.Category
 
     ' =====================================================
     ' F: Satuan
     ' =====================================================
-    TableManager.SetValue _
+    managerTable.SetValue _
         tbl, rowIndex, COLUMN_UOM, catalogueItem.unitOfMeasurement
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".WriteCatalogueTableRow", _
         "Gagal menulis satu data katalog ke tabel."
 
@@ -255,21 +255,21 @@ Private Sub ClearCatalogueTable( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ClearCatalogueTable", _
             "TableCatalogues belum diinisialisasi."
     End If
 
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearCatalogueTable", _
         "Gagal membersihkan data katalog sebelumnya."
 
@@ -287,14 +287,14 @@ Private Sub ValidateCatalogueTableColumns( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ValidateCatalogueTableColumns", _
             "TableCatalogues tidak ditemukan " & _
             "pada worksheet ini."
     End If
 
-    TableManager.ValidateColumns tbl, Array( _
+    managerTable.ValidateColumns tbl, Array( _
         COLUMN_ID, _
         COLUMN_NAME, _
         COLUMN_ALIAS, _
@@ -306,9 +306,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateCatalogueTableColumns", _
         "Struktur TableCatalogues tidak sesuai."
 
@@ -330,13 +330,13 @@ Private Sub ApplyCatalogueTableFormatting( _
     Dim errInfo As ErrorInfo
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".ApplyCatalogueTableFormatting", _
             "TableCatalogues belum diinisialisasi."
     End If
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
@@ -353,7 +353,7 @@ Private Sub ApplyCatalogueTableFormatting( _
 
     For Each columnName In allColumns
 
-        Set columnRange = TableManager.GetColumnRange( _
+        Set columnRange = managerTable.GetColumnRange( _
             tbl, CStr(columnName))
 
         If Not columnRange Is Nothing Then
@@ -365,25 +365,25 @@ Private Sub ApplyCatalogueTableFormatting( _
     ' =====================================================
     ' ID formatting
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ID, "0", xlCenter
 
     ' =====================================================
     ' Text columns
     ' =====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_NAME, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ALIAS, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_CODE, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_CATEGORY, "@"
 
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_UOM, "@", xlCenter
 
 CleanUp:
@@ -391,11 +391,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyCatalogueTableFormatting", _
         "Gagal menerapkan format TableCatalogues."
 
@@ -423,59 +423,59 @@ Public Sub SaveCatalogue_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy()
+    state = managerForm.BeginBusy()
 
     ' =====================================================
     ' Step 1: Read input values
     ' =====================================================
-    catalogueName = FormManager.GetCellText( _
+    catalogueName = managerForm.GetCellText( _
         Me, CELL_NAME)
 
-    catalogueAlias = FormManager.GetCellText( _
+    catalogueAlias = managerForm.GetCellText( _
         Me, CELL_ALIAS)
 
-    catalogueCode = FormManager.GetCellText( _
+    catalogueCode = managerForm.GetCellText( _
         Me, CELL_CODE)
 
-    catalogueCategory = FormManager.GetCellText( _
+    catalogueCategory = managerForm.GetCellText( _
         Me, CELL_CATEGORY)
 
-    unitOfMeasurement = FormManager.GetCellText( _
+    unitOfMeasurement = managerForm.GetCellText( _
         Me, CELL_UOM)
 
     ' =====================================================
     ' Step 2: Validate input values
     ' =====================================================
-    If ValidationText.IsBlank(catalogueName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueName) Then
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueName, _
             MODULE_NAME & ".SaveCatalogue_Click", _
             "Nama katalog wajib diisi."
     End If
 
-    If ValidationText.IsBlank(catalogueAlias) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueAlias) Then
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueAlias, _
             MODULE_NAME & ".SaveCatalogue_Click", _
             "Alias katalog wajib diisi."
     End If
 
-    If ValidationText.IsBlank(catalogueCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueCode) Then
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueCode, _
             MODULE_NAME & ".SaveCatalogue_Click", _
             "Kode katalog wajib diisi."
     End If
 
-    If ValidationText.IsBlank(catalogueCategory) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(catalogueCategory) Then
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueCategory, _
             MODULE_NAME & ".SaveCatalogue_Click", _
             "Kategori katalog wajib diisi."
     End If
 
-    If ValidationText.IsBlank(unitOfMeasurement) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(unitOfMeasurement) Then
+        managerError.ThrowError _
             sheetMasterDataCatalogue.EmptyCatalogueUnitOfMeasurement, _
             MODULE_NAME & ".SaveCatalogue_Click", _
             "Satuan katalog wajib diisi."
@@ -522,7 +522,7 @@ Public Sub SaveCatalogue_Click()
         "Satuan: " & _
         catalogueItem.unitOfMeasurement
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         confirmationMessage, _
         "Konfirmasi Simpan Katalog") Then
 
@@ -532,18 +532,18 @@ Public Sub SaveCatalogue_Click()
     ' =====================================================
     ' Step 5: Call service procedure
     ' =====================================================
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Menyimpan katalog baru...", True
 
     serviceCatalogue.CreateCatalogue _
         catalogueItem:=catalogueItem
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
     ' =====================================================
     ' Step 6: Show success message
     ' =====================================================
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         "Katalog baru berhasil disimpan." & _
         vbCrLf & vbCrLf & _
         "Nama: " & catalogueItem.Name & vbCrLf & _
@@ -569,20 +569,20 @@ Public Sub SaveCatalogue_Click()
     On Error GoTo ErrorHandler
 
 CleanUp:
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set catalogueItem = Nothing
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Set catalogueItem = Nothing
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menyimpan katalog baru."
 
 End Sub
@@ -601,9 +601,9 @@ Public Sub RefreshCatalogueInput_Click()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.CaptureState()
+    state = managerForm.CaptureState()
 
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         "Apakah Anda yakin ingin membersihkan " & _
         "seluruh input katalog?", _
         "Konfirmasi Refresh Form") Then
@@ -612,22 +612,22 @@ Public Sub RefreshCatalogueInput_Click()
     End If
 
     ' Events off while clearing; screen updating unchanged.
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         disableScreenUpdating:=False)
 
     ClearCatalogueInput
 
 CleanUp:
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal membersihkan form input katalog."
 
 End Sub
@@ -642,7 +642,7 @@ Private Sub ClearCatalogueInput()
 
     Dim errInfo As ErrorInfo
 
-    FormManager.ClearCells Me, _
+    managerForm.ClearCells Me, _
         CELL_NAME, _
         CELL_ALIAS, _
         CELL_CODE, _
@@ -654,9 +654,9 @@ Private Sub ClearCatalogueInput()
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearCatalogueInput"
 
 End Sub

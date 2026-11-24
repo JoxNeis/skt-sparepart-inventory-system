@@ -1,4 +1,4 @@
-Attribute VB_Name = "TableManager"
+Attribute VB_Name = "managerTable"
 Option Explicit
 
 ' =========================================================
@@ -12,27 +12,27 @@ Option Explicit
 ' table body (ListRow.Index), never the worksheet row.
 ' Columns are always addressed by their header text.
 '
-'   Set tbl = TableManager.GetTable(Me, TABLE_NAME)
-'   TableManager.ValidateColumns tbl, Array(COLUMN_ID, COLUMN_NAME)
+'   Set tbl = managerTable.GetTable(Me, TABLE_NAME)
+'   managerTable.ValidateColumns tbl, Array(COLUMN_ID, COLUMN_NAME)
 '
-'   For rowIndex = 1 To TableManager.RowCount(tbl)
-'       nameValue = TableManager.GetText(tbl, rowIndex, COLUMN_NAME)
+'   For rowIndex = 1 To managerTable.RowCount(tbl)
+'       nameValue = managerTable.GetText(tbl, rowIndex, COLUMN_NAME)
 '   Next rowIndex
 '
-'   rowIndex = TableManager.AddRow(tbl)
-'   TableManager.SetValue tbl, rowIndex, COLUMN_NAME, "Bolt"
+'   rowIndex = managerTable.AddRow(tbl)
+'   managerTable.SetValue tbl, rowIndex, COLUMN_NAME, "Bolt"
 '
 '   ' Worksheet_SelectionChange
-'   If TableManager.IsInColumn(Target, tbl, COLUMN_UPDATE) Then
-'       rowIndex = TableManager.GetRowIndex(tbl, Target)
+'   If managerTable.IsInColumn(Target, tbl, COLUMN_UPDATE) Then
+'       rowIndex = managerTable.GetRowIndex(tbl, Target)
 '   End If
 ' =========================================================
 
-Private Const MODULE_NAME As String = "TableManager"
+Private Const MODULE_NAME As String = "managerTable"
 
 ' =========================================================
 ' ERROR CODES (10400 - 10499)
-' Usage: ErrorManager.ThrowError TableManager.TableNotFound, ...
+' Usage: managerError.ThrowError managerTable.TableNotFound, ...
 ' =========================================================
 Public Const TableNotFound As Long = 10401           ' table name not on the sheet / tbl is Nothing
 Public Const ColumnNotFound As Long = 10402          ' header text not in the table
@@ -47,7 +47,7 @@ Public Const EmptyWorksheet As Long = 10407          ' ws parameter is Nothing
 ' TABLE
 ' =========================================================
 
-' Get a table by name or raise TableManager.TableNotFound.
+' Get a table by name or raise managerTable.TableNotFound.
 Public Function GetTable( _
     ByVal ws As Worksheet, _
     ByVal tableName As String) As ListObject
@@ -55,8 +55,8 @@ Public Function GetTable( _
     Dim tbl As ListObject
 
     If ws Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.EmptyWorksheet, _
+        managerError.ThrowError _
+            managerTable.EmptyWorksheet, _
             MODULE_NAME & ".GetTable", _
             "Worksheet tidak boleh kosong."
     End If
@@ -66,8 +66,8 @@ Public Function GetTable( _
     On Error GoTo 0
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             MODULE_NAME & ".GetTable", _
             "Tabel '" & tableName & "' tidak ditemukan " & _
             "pada worksheet '" & ws.Name & "'."
@@ -78,14 +78,14 @@ Public Function GetTable( _
 End Function
 
 
-' Raise TableManager.TableNotFound when tbl is Nothing.
+' Raise managerTable.TableNotFound when tbl is Nothing.
 Public Sub RequireTable( _
     ByVal tbl As ListObject, _
     ByVal errorSource As String)
 
     If tbl Is Nothing Then
-        ErrorManager.ThrowError _
-            TableManager.TableNotFound, _
+        managerError.ThrowError _
+            managerTable.TableNotFound, _
             errorSource, _
             "Tabel belum diinisialisasi."
     End If
@@ -134,7 +134,7 @@ Public Function HasColumn( _
 End Function
 
 
-' Raise TableManager.ColumnNotFound for the first header in
+' Raise managerTable.ColumnNotFound for the first header in
 ' requiredColumns (an Array) that is missing.
 Public Sub ValidateColumns( _
     ByVal tbl As ListObject, _
@@ -183,8 +183,8 @@ End Function
 ' data cells of a column. Does nothing when the table is
 ' empty. Pass vbNullString / 0 to skip a setting.
 '
-'   TableManager.FormatColumn tbl, COLUMN_ID, "0", xlCenter
-'   TableManager.FormatColumn tbl, COLUMN_NAME, "@"
+'   managerTable.FormatColumn tbl, COLUMN_ID, "0", xlCenter
+'   managerTable.FormatColumn tbl, COLUMN_NAME, "@"
 Public Sub FormatColumn( _
     ByVal tbl As ListObject, _
     ByVal columnName As String, _
@@ -314,7 +314,7 @@ Public Function IsInColumn( _
     If tbl Is Nothing Then Exit Function
     If tbl.ListRows.Count = 0 Then Exit Function
 
-    IsInColumn = FormManager.IsInRange( _
+    IsInColumn = managerForm.IsInRange( _
         target, GetColumnRange(tbl, columnName))
 
 End Function
@@ -331,7 +331,7 @@ Public Function IsInTable( _
     If tbl Is Nothing Then Exit Function
     If tbl.DataBodyRange Is Nothing Then Exit Function
 
-    IsInTable = FormManager.IsInRange(target, tbl.DataBodyRange)
+    IsInTable = managerForm.IsInRange(target, tbl.DataBodyRange)
 
 End Function
 
@@ -399,7 +399,7 @@ Public Function HasValue( _
     If IsError(value) Then
         HasValue = False
     Else
-        HasValue = ValidationText.IsNotBlank(value)
+        HasValue = managerValidationText.IsNotBlank(value)
     End If
 
 End Function
@@ -426,7 +426,7 @@ Public Function GetText( _
 End Function
 
 
-' Number. Blank -> 0. Not numeric -> TableManager.InvalidNumber.
+' Number. Blank -> 0. Not numeric -> managerTable.InvalidNumber.
 Public Function GetDouble( _
     ByVal tbl As ListObject, _
     ByVal rowIndex As Long, _
@@ -438,14 +438,14 @@ Public Function GetDouble( _
 
     RequireNoCellError value, tbl, rowIndex, columnName, MODULE_NAME & ".GetDouble"
 
-    If ValidationText.IsBlank(value) Then
+    If managerValidationText.IsBlank(value) Then
         GetDouble = 0
         Exit Function
     End If
 
-    If ValidationNumeric.IsNotNumber(value) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidNumber, _
+    If managerValidationNumeric.IsNotNumber(value) Then
+        managerError.ThrowError _
+            managerTable.InvalidNumber, _
             MODULE_NAME & ".GetDouble", _
             "Kolom '" & columnName & "' baris ke-" & _
             CStr(rowIndex) & " harus berupa angka."
@@ -479,14 +479,14 @@ Public Function GetDate( _
 
     RequireNoCellError value, tbl, rowIndex, columnName, MODULE_NAME & ".GetDate"
 
-    If ValidationText.IsBlank(value) Then
+    If managerValidationText.IsBlank(value) Then
         GetDate = 0
         Exit Function
     End If
 
     If Not IsDate(value) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidDate, _
+        managerError.ThrowError _
+            managerTable.InvalidDate, _
             MODULE_NAME & ".GetDate", _
             "Kolom '" & columnName & "' baris ke-" & _
             CStr(rowIndex) & " harus berupa tanggal."
@@ -530,8 +530,8 @@ Private Sub RequireColumn( _
     RequireTable tbl, errorSource
 
     If Not HasColumn(tbl, columnName) Then
-        ErrorManager.ThrowError _
-            TableManager.ColumnNotFound, _
+        managerError.ThrowError _
+            managerTable.ColumnNotFound, _
             errorSource, _
             "Kolom '" & columnName & _
             "' tidak ditemukan pada tabel '" & tbl.Name & "'."
@@ -548,8 +548,8 @@ Private Sub RequireRow( _
     RequireTable tbl, errorSource
 
     If Not IsValidRow(tbl, rowIndex) Then
-        ErrorManager.ThrowError _
-            TableManager.InvalidRow, _
+        managerError.ThrowError _
+            managerTable.InvalidRow, _
             errorSource, _
             "Baris ke-" & CStr(rowIndex) & _
             " tidak ada pada tabel '" & tbl.Name & "'."
@@ -566,8 +566,8 @@ Private Sub RequireNoCellError( _
     ByVal errorSource As String)
 
     If IsError(value) Then
-        ErrorManager.ThrowError _
-            TableManager.CellContainsError, _
+        managerError.ThrowError _
+            managerTable.CellContainsError, _
             errorSource, _
             "Kolom '" & columnName & "' baris ke-" & _
             CStr(rowIndex) & " pada tabel '" & tbl.Name & _

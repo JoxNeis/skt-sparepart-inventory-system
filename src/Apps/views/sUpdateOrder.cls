@@ -21,7 +21,7 @@ Private Const CELL_UNTIL_DATE As String = "B8"
 ' =========================================================
 ' Table columns (TableRequestUpdateOrder)
 '
-' TableManager addresses columns by header text. These
+' managerTable addresses columns by header text. These
 ' names must exactly match the Excel table headers. The
 ' comment shows the column position in the table.
 ' =========================================================
@@ -66,23 +66,23 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
 
     Dim errInfo As ErrorInfo
 
-    If FormManager.IsInRange( _
+    If managerForm.IsInRange( _
         Target, _
         Me.Range(CELL_FROM_DATE & ":" & CELL_UNTIL_DATE)) Then
 
         Application.EnableEvents = False
 
-        FormManager.ShowDatePicker Target
+        managerForm.ShowDatePicker Target
 
         GoTo CleanUp
 
     End If
 
     ' The selected cell is not in the approval column.
-    Set tbl = TableManager.GetTable( _
+    Set tbl = managerTable.GetTable( _
         Me, TABLE_REQUEST_UPDATE_ORDER)
 
-    If Not TableManager.IsInColumn( _
+    If Not managerTable.IsInColumn( _
         Target, tbl, COL_ACTION) Then
 
         Exit Sub
@@ -102,13 +102,13 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
     Application.EnableEvents = True
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal memproses persetujuan update order."
 
 End Sub
@@ -131,30 +131,30 @@ Public Sub CariPengajuanUpdateOrder()
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.BeginBusy( _
+    state = managerForm.BeginBusy( _
         "Mengambil data pengajuan update order...")
 
     ' =====================================================
     ' Read and validate filter values
     ' =====================================================
-    manufacturingPlantName = FormManager.GetCellText( _
+    manufacturingPlantName = managerForm.GetCellText( _
         Me, CELL_MANUFACTURING_PLANT)
 
     ValidateSearchParameters _
         manufacturingPlantName:=manufacturingPlantName, _
-        fromDateValue:=FormManager.GetCellValue(Me, CELL_FROM_DATE), _
-        untilDateValue:=FormManager.GetCellValue(Me, CELL_UNTIL_DATE)
+        fromDateValue:=managerForm.GetCellValue(Me, CELL_FROM_DATE), _
+        untilDateValue:=managerForm.GetCellValue(Me, CELL_UNTIL_DATE)
 
     fromDate = DateValue( _
-        FormManager.GetCellValue(Me, CELL_FROM_DATE))
+        managerForm.GetCellValue(Me, CELL_FROM_DATE))
 
     untilDate = DateValue( _
-        FormManager.GetCellValue(Me, CELL_UNTIL_DATE))
+        managerForm.GetCellValue(Me, CELL_UNTIL_DATE))
 
     ' =====================================================
     ' Clear previous result
     ' =====================================================
-    Set tbl = TableManager.GetTable( _
+    Set tbl = managerTable.GetTable( _
         Me, TABLE_REQUEST_UPDATE_ORDER)
 
     ClearOrderRequestUpdateData tbl
@@ -168,8 +168,8 @@ Public Sub CariPengajuanUpdateOrder()
         untilDate:=untilDate)
 
     If rs Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyRecordset, _
+        managerError.ThrowError _
+            managerDatabase.EmptyRecordset, _
             MODULE_NAME & ".CariPengajuanUpdateOrder", _
             "DAO tidak mengembalikan recordset."
     End If
@@ -181,7 +181,7 @@ Public Sub CariPengajuanUpdateOrder()
     ' =====================================================
     Do While Not rs.EOF
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
         WriteOrderRequestUpdateRow _
             tbl:=tbl, _
@@ -202,34 +202,34 @@ Public Sub CariPengajuanUpdateOrder()
     ' Display result
     ' =====================================================
     If resultCount = 0 Then
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             "Tidak ada pengajuan update order " & _
             "yang ditemukan.", _
             "Pengajuan Update Order"
     Else
-        FormManager.ShowInfo _
+        managerForm.ShowInfo _
             CStr(resultCount) & _
             " pengajuan update order ditemukan.", _
             "Pengajuan Update Order"
     End If
 
 CleanUp:
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo, _
+    managerError.ShowError errInfo, _
         "Gagal menampilkan pengajuan update order."
 
 End Sub
@@ -250,122 +250,122 @@ Private Sub WriteOrderRequestUpdateRow( _
     ' =====================================================
 
     ' No
-    TableManager.SetValue tbl, rowIndex, COL_NUMBER, _
+    managerTable.SetValue tbl, rowIndex, COL_NUMBER, _
         rowNumber
 
     ' Tanggal Pengajuan
-    TableManager.SetValue tbl, rowIndex, COL_REQUEST_DATE, _
-        DatabaseManager.FieldDate(rs, "update_request_date")
+    managerTable.SetValue tbl, rowIndex, COL_REQUEST_DATE, _
+        managerDatabase.FieldDate(rs, "update_request_date")
 
     ' =====================================================
     ' Old order
     ' =====================================================
 
     ' Old UUID
-    TableManager.SetValue tbl, rowIndex, COL_OLD_UUID, _
-        DatabaseManager.FieldText(rs, "old_transaction_uuid")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_UUID, _
+        managerDatabase.FieldText(rs, "old_transaction_uuid")
 
     ' Old PO ID
     '
     ' The query currently returns old_order_id,
     ' not the actual old PO ID.
-    TableManager.SetValue tbl, rowIndex, COL_OLD_PO_ID, _
-        DatabaseManager.FieldText(rs, "old_order_id")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_PO_ID, _
+        managerDatabase.FieldText(rs, "old_order_id")
 
     ' Old catalogue
-    TableManager.SetValue tbl, rowIndex, COL_OLD_CATALOGUE, _
-        DatabaseManager.FieldText(rs, "old_catalogue_name")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_CATALOGUE, _
+        managerDatabase.FieldText(rs, "old_catalogue_name")
 
     ' Old amount
-    TableManager.SetValue tbl, rowIndex, COL_OLD_AMOUNT, _
-        DatabaseManager.FieldDouble(rs, "old_amount")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_AMOUNT, _
+        managerDatabase.FieldDouble(rs, "old_amount")
 
     ' Old unit of measurement
-    TableManager.SetValue tbl, rowIndex, COL_OLD_UNIT, _
-        DatabaseManager.FieldText(rs, "old_unit_of_measurement")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_UNIT, _
+        managerDatabase.FieldText(rs, "old_unit_of_measurement")
 
     ' Old vendor
-    TableManager.SetValue tbl, rowIndex, COL_OLD_VENDOR, _
-        DatabaseManager.FieldText(rs, "old_vendor_name")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_VENDOR, _
+        managerDatabase.FieldText(rs, "old_vendor_name")
 
     ' Old order date
-    TableManager.SetValue tbl, rowIndex, COL_OLD_ORDER_DATE, _
+    managerTable.SetValue tbl, rowIndex, COL_OLD_ORDER_DATE, _
         RecordsetDate(rs, "old_order_date")
 
     ' Old remarks
-    TableManager.SetValue tbl, rowIndex, COL_OLD_REMARKS, _
-        DatabaseManager.FieldText(rs, "old_remarks")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_REMARKS, _
+        managerDatabase.FieldText(rs, "old_remarks")
 
     ' Old person in charge
-    TableManager.SetValue tbl, rowIndex, COL_OLD_PIC, _
-        DatabaseManager.FieldText(rs, "old_pic")
+    managerTable.SetValue tbl, rowIndex, COL_OLD_PIC, _
+        managerDatabase.FieldText(rs, "old_pic")
 
     ' =====================================================
     ' New order
     ' =====================================================
 
     ' New UUID
-    TableManager.SetValue tbl, rowIndex, COL_NEW_UUID, _
-        DatabaseManager.FieldText(rs, "new_transaction_uuid")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_UUID, _
+        managerDatabase.FieldText(rs, "new_transaction_uuid")
 
     ' New PO ID
     '
     ' The query currently returns new_order_id,
     ' not the actual new PO ID.
-    TableManager.SetValue tbl, rowIndex, COL_NEW_PO_ID, _
-        DatabaseManager.FieldText(rs, "new_order_id")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_PO_ID, _
+        managerDatabase.FieldText(rs, "new_order_id")
 
     ' New catalogue
-    TableManager.SetValue tbl, rowIndex, COL_NEW_CATALOGUE, _
-        DatabaseManager.FieldText(rs, "new_catalogue_name")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_CATALOGUE, _
+        managerDatabase.FieldText(rs, "new_catalogue_name")
 
     ' New amount
-    TableManager.SetValue tbl, rowIndex, COL_NEW_AMOUNT, _
-        DatabaseManager.FieldDouble(rs, "new_amount")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_AMOUNT, _
+        managerDatabase.FieldDouble(rs, "new_amount")
 
     ' New unit of measurement
-    TableManager.SetValue tbl, rowIndex, COL_NEW_UNIT, _
-        DatabaseManager.FieldText(rs, "new_unit_of_measurement")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_UNIT, _
+        managerDatabase.FieldText(rs, "new_unit_of_measurement")
 
     ' New vendor
-    TableManager.SetValue tbl, rowIndex, COL_NEW_VENDOR, _
-        DatabaseManager.FieldText(rs, "new_vendor_name")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_VENDOR, _
+        managerDatabase.FieldText(rs, "new_vendor_name")
 
     ' New order date
-    TableManager.SetValue tbl, rowIndex, COL_NEW_ORDER_DATE, _
+    managerTable.SetValue tbl, rowIndex, COL_NEW_ORDER_DATE, _
         RecordsetDate(rs, "new_order_date")
 
     ' New remarks
-    TableManager.SetValue tbl, rowIndex, COL_NEW_REMARKS, _
-        DatabaseManager.FieldText(rs, "new_remarks")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_REMARKS, _
+        managerDatabase.FieldText(rs, "new_remarks")
 
     ' New person in charge
-    TableManager.SetValue tbl, rowIndex, COL_NEW_PIC, _
-        DatabaseManager.FieldText(rs, "new_pic")
+    managerTable.SetValue tbl, rowIndex, COL_NEW_PIC, _
+        managerDatabase.FieldText(rs, "new_pic")
 
     ' =====================================================
     ' Status and action
     ' =====================================================
 
     ' Requester
-    TableManager.SetValue tbl, rowIndex, COL_REQUESTED_BY, _
-        DatabaseManager.FieldText(rs, "update_request_by")
+    managerTable.SetValue tbl, rowIndex, COL_REQUESTED_BY, _
+        managerDatabase.FieldText(rs, "update_request_by")
 
     ' Action
-    TableManager.SetValue tbl, rowIndex, COL_ACTION, _
+    managerTable.SetValue tbl, rowIndex, COL_ACTION, _
         "SETUJUI"
 
     ' Internal update request ID (hidden column)
-    TableManager.SetValue tbl, rowIndex, COL_UPDATE_REQUEST_ID, _
-        DatabaseManager.FieldText(rs, "update_request_id")
+    managerTable.SetValue tbl, rowIndex, COL_UPDATE_REQUEST_ID, _
+        managerDatabase.FieldText(rs, "update_request_id")
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".WriteOrderRequestUpdateRow", _
         "Gagal menuliskan pengajuan update order " & _
         "ke worksheet."
@@ -385,36 +385,36 @@ Private Sub ValidateSearchParameters( _
 
     Dim errInfo As ErrorInfo
 
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyPlantName, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Lokasi manufacturing plant wajib diisi."
     End If
 
     If IsEmpty(fromDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyFromDate, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Tanggal awal wajib diisi."
     End If
 
     If Not IsDate(fromDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.InvalidFromDate, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Tanggal awal tidak valid."
     End If
 
     If IsEmpty(untilDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyUntilDate, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Tanggal akhir wajib diisi."
     End If
 
     If Not IsDate(untilDateValue) Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.InvalidUntilDate, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Tanggal akhir tidak valid."
@@ -424,7 +424,7 @@ Private Sub ValidateSearchParameters( _
     untilDate = DateValue(untilDateValue)
 
     If untilDate < fromDate Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.InvalidDateRange, _
             MODULE_NAME & ".ValidateSearchParameters", _
             "Tanggal akhir tidak boleh lebih kecil " & _
@@ -435,9 +435,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ValidateSearchParameters", _
         "Filter pengajuan update order tidak valid."
 
@@ -453,15 +453,15 @@ Private Sub ClearOrderRequestUpdateData( _
 
     ' Delete existing table rows while preserving the
     ' table header and formatting.
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
 CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ClearOrderRequestUpdateData", _
         "Gagal membersihkan data pengajuan " & _
         "update order sebelumnya."
@@ -476,36 +476,36 @@ Private Sub ApplyOrderRequestUpdateFormatting( _
 
     Dim errInfo As ErrorInfo
 
-    If TableManager.HasRows(tbl) Then
+    If managerTable.HasRows(tbl) Then
 
         ' Request date
-        TableManager.FormatColumn tbl, COL_REQUEST_DATE, _
+        managerTable.FormatColumn tbl, COL_REQUEST_DATE, _
             "dd-mmm-yyyy"
 
         ' Old order date
-        TableManager.FormatColumn tbl, COL_OLD_ORDER_DATE, _
+        managerTable.FormatColumn tbl, COL_OLD_ORDER_DATE, _
             "dd-mmm-yyyy"
 
         ' New order date
-        TableManager.FormatColumn tbl, COL_NEW_ORDER_DATE, _
+        managerTable.FormatColumn tbl, COL_NEW_ORDER_DATE, _
             "dd-mmm-yyyy"
 
         ' Old amount
-        TableManager.FormatColumn tbl, COL_OLD_AMOUNT, _
+        managerTable.FormatColumn tbl, COL_OLD_AMOUNT, _
             "#,##0.00"
 
         ' New amount
-        TableManager.FormatColumn tbl, COL_NEW_AMOUNT, _
+        managerTable.FormatColumn tbl, COL_NEW_AMOUNT, _
             "#,##0.00"
 
         ' General alignment (columns No .. SETUJUI)
         Me.Range( _
-            TableManager.GetColumnRange(tbl, COL_NUMBER), _
-            TableManager.GetColumnRange(tbl, COL_ACTION) _
+            managerTable.GetColumnRange(tbl, COL_NUMBER), _
+            managerTable.GetColumnRange(tbl, COL_ACTION) _
         ).VerticalAlignment = xlCenter
 
         ' Keep the update request ID hidden.
-        TableManager.GetColumnRange( _
+        managerTable.GetColumnRange( _
             tbl, COL_UPDATE_REQUEST_ID _
         ).EntireColumn.Hidden = True
 
@@ -515,7 +515,7 @@ Private Sub ApplyOrderRequestUpdateFormatting( _
         ' there is no data range, use the sheet column).
         Me.Columns( _
             tbl.Range.Column + _
-            TableManager.GetColumnIndex(tbl, COL_UPDATE_REQUEST_ID) - 1 _
+            managerTable.GetColumnIndex(tbl, COL_UPDATE_REQUEST_ID) - 1 _
         ).Hidden = True
 
     End If
@@ -524,9 +524,9 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyOrderRequestUpdateFormatting", _
         "Gagal menerapkan format pengajuan update order."
 
@@ -534,16 +534,16 @@ End Sub
 
 
 ' Date field for a table cell: Null or a value that is
-' not a date -> blank cell (DatabaseManager.FieldDate would
+' not a date -> blank cell (managerDatabase.FieldDate would
 ' return date 0 for Null and raise for a non-date value).
 Private Function RecordsetDate( _
     ByVal rs As ADODB.recordset, _
     ByVal fieldName As String) As Variant
 
-    If DatabaseManager.FieldIsNull(rs, fieldName) Then
+    If managerDatabase.FieldIsNull(rs, fieldName) Then
         RecordsetDate = vbNullString
-    ElseIf IsDate(DatabaseManager.FieldValue(rs, fieldName)) Then
-        RecordsetDate = DatabaseManager.FieldDate(rs, fieldName)
+    ElseIf IsDate(managerDatabase.FieldValue(rs, fieldName)) Then
+        RecordsetDate = managerDatabase.FieldDate(rs, fieldName)
     Else
         RecordsetDate = vbNullString
     End If
@@ -574,17 +574,17 @@ Private Sub HandleApproveOrderRequestUpdate( _
     ' =====================================================
 
     ' Table row of the clicked cell (0 = outside the table).
-    selectedRowIndex = TableManager.GetRowIndex( _
+    selectedRowIndex = managerTable.GetRowIndex( _
         tbl, targetCell)
 
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
         Exit Sub
     End If
 
-    actionText = TableManager.GetText( _
+    actionText = managerTable.GetText( _
         tbl, selectedRowIndex, COL_ACTION)
 
-    If Not ValidationText.IsSameText( _
+    If Not managerValidationText.IsSameText( _
         actionText, _
         "SETUJUI") Then
 
@@ -592,48 +592,48 @@ Private Sub HandleApproveOrderRequestUpdate( _
     End If
 
     ' Original transaction UUID
-    originalTransactionUUID = TableManager.GetText( _
+    originalTransactionUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COL_OLD_UUID)
 
     ' Proposed transaction UUID
-    proposedTransactionUUID = TableManager.GetText( _
+    proposedTransactionUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COL_NEW_UUID)
 
     ' Use the Windows username.
     '
     ' Replace this with the logged-in application user
     ' if your workbook has its own authentication system.
-    currentUser = pHelper.TrimText(Environ$("Username"))
+    currentUser = coreHelper.TrimText(Environ$("Username"))
 
-    If ValidationText.IsBlank(originalTransactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(originalTransactionUUID) Then
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyOriginalOrderUUID, _
             MODULE_NAME & ".HandleApproveOrderRequestUpdate", _
             "UUID transaksi original pada baris " & _
             CStr(targetRow) & " tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(proposedTransactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(proposedTransactionUUID) Then
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyProposedOrderUUID, _
             MODULE_NAME & ".HandleApproveOrderRequestUpdate", _
             "UUID transaksi proposed pada baris " & _
             CStr(targetRow) & " tidak boleh kosong."
     End If
 
-    If ValidationText.IsSameText( _
+    If managerValidationText.IsSameText( _
         originalTransactionUUID, _
         proposedTransactionUUID) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetUpdateOrder.SameOriginalProposedOrderUUID, _
             MODULE_NAME & ".HandleApproveOrderRequestUpdate", _
             "UUID transaksi original dan proposed " & _
             "tidak boleh sama."
     End If
 
-    If ValidationText.IsBlank(currentUser) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(currentUser) Then
+        managerError.ThrowError _
             sheetUpdateOrder.EmptyApproverUser, _
             MODULE_NAME & ".HandleApproveOrderRequestUpdate", _
             "User yang menyetujui tidak dapat ditentukan."
@@ -642,7 +642,7 @@ Private Sub HandleApproveOrderRequestUpdate( _
     ' =====================================================
     ' Ask for confirmation
     ' =====================================================
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         "Apakah Anda yakin ingin menyetujui " & _
         "pengajuan update order ini?" & vbCrLf & _
         vbCrLf & _
@@ -664,14 +664,14 @@ Private Sub HandleApproveOrderRequestUpdate( _
     ' =====================================================
     ' Temporarily disable the action cell
     ' =====================================================
-    TableManager.SetValue tbl, selectedRowIndex, COL_ACTION, _
+    managerTable.SetValue tbl, selectedRowIndex, COL_ACTION, _
         "MEMPROSES..."
 
-    TableManager.GetCell( _
+    managerTable.GetCell( _
         tbl, selectedRowIndex, COL_ACTION _
     ).Font.Color = RGB(128, 128, 128)
 
-    FormManager.SetStatus _
+    managerForm.SetStatus _
         "Menyetujui pengajuan update order...", True
 
     ' =====================================================
@@ -686,16 +686,16 @@ Private Sub HandleApproveOrderRequestUpdate( _
     ' =====================================================
     ' Approval succeeded
     ' =====================================================
-    TableManager.SetValue tbl, selectedRowIndex, COL_ACTION, _
+    managerTable.SetValue tbl, selectedRowIndex, COL_ACTION, _
         "DISETUJUI"
 
-    TableManager.GetCell( _
+    managerTable.GetCell( _
         tbl, selectedRowIndex, COL_ACTION _
     ).Font.Color = RGB(0, 128, 0)
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         "Pengajuan update order berhasil disetujui.", _
         "Persetujuan Berhasil"
 
@@ -704,25 +704,25 @@ Private Sub HandleApproveOrderRequestUpdate( _
     CariPengajuanUpdateOrder
 
 CleanUp:
-    FormManager.ClearStatus
+    managerForm.ClearStatus
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     ' Restore the action cell if approval failed.
-    If TableManager.IsValidRow(tbl, selectedRowIndex) Then
-        TableManager.SetValue tbl, selectedRowIndex, COL_ACTION, _
+    If managerTable.IsValidRow(tbl, selectedRowIndex) Then
+        managerTable.SetValue tbl, selectedRowIndex, COL_ACTION, _
             "SETUJUI"
 
-        TableManager.GetCell( _
+        managerTable.GetCell( _
             tbl, selectedRowIndex, COL_ACTION _
         ).Font.ColorIndex = xlAutomatic
     End If
 
-    FormManager.ClearStatus
+    managerForm.ClearStatus
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".HandleApproveOrderRequestUpdate", _
         "Gagal menyetujui pengajuan update order."
 

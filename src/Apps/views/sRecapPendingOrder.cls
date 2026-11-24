@@ -8,7 +8,7 @@ Attribute VB_TemplateDerived = False
 Attribute VB_Customizable = True
 Option Explicit
 
-' Error codes: sheetRecapPendingOrder (ErrorCodesSheets.bas)
+' Error codes: sheetRecapPendingOrder (managerErrorCodesSheets.bas)
 
 Private Const MODULE_NAME As String = "SHEET_RECAP_PENDING_ORDER"
 
@@ -43,19 +43,19 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     Dim state As FormState
     Dim errInfo As ErrorInfo
 
-    state = FormManager.CaptureState()
+    state = managerForm.CaptureState()
 
     '=====================================================
     'Date input cells
     '=====================================================
-    If FormManager.IsInRange( _
+    If managerForm.IsInRange( _
         Target, _
         Me.Range(CELL_FROM_DATE & ":" & CELL_UNTIL_DATE) _
     ) Then
 
         Application.EnableEvents = False
 
-        FormManager.ShowDatePicker Target
+        managerForm.ShowDatePicker Target
 
         GoTo CleanUp
 
@@ -64,16 +64,16 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     '=====================================================
     'Get the order recap table
     '=====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     '=====================================================
     'UPDATE column clicked
     '=====================================================
-    If TableManager.IsInColumn( _
+    If managerTable.IsInColumn( _
         Target, _
         tbl, _
         COLUMN_UPDATE) Then
@@ -81,7 +81,7 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
         Application.EnableEvents = False
 
         selectedRowIndex = _
-            TableManager.GetRowIndex(tbl, Target)
+            managerTable.GetRowIndex(tbl, Target)
 
         CreateOrderUpdateRequest _
             tbl:=tbl, _
@@ -94,18 +94,18 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
 CleanUp:
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
 
-    FormManager.EndBusy state
+    managerForm.EndBusy state
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -129,9 +129,9 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate selected row
     '=====================================================
-    If Not TableManager.IsValidRow(tbl, selectedRowIndex) Then
+    If Not managerTable.IsValidRow(tbl, selectedRowIndex) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.InvalidSelectedOrderRow, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Baris order yang dipilih tidak valid."
@@ -141,12 +141,12 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Get the original transaction UUID
     '=====================================================
-    originalUUID = TableManager.GetText( _
+    originalUUID = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UUID)
 
-    If ValidationText.IsBlank(originalUUID) Then
+    If managerValidationText.IsBlank(originalUUID) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyOriginalOrderUUID, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "UUID order original tidak ditemukan."
@@ -156,10 +156,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate PO ID
     '=====================================================
-    If ValidationText.IsBlank(TableManager.GetText( _
+    If managerValidationText.IsBlank(managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PO_ID)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyOrderPoId, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "PO ID order tidak boleh kosong."
@@ -169,10 +169,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate catalogue name
     '=====================================================
-    If ValidationText.IsBlank(TableManager.GetText( _
+    If managerValidationText.IsBlank(managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_CATALOGUE)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyOrderCatalogueName, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Nama barang tidak boleh kosong."
@@ -182,20 +182,20 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate order amount
     '=====================================================
-    If ValidationNumeric.IsNotNumber(TableManager.GetValue( _
+    If managerValidationNumeric.IsNotNumber(managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_AMOUNT)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.InvalidOrderAmount, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Jumlah order harus berupa angka."
 
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(TableManager.GetDouble( _
+    If managerValidationNumeric.IsZeroOrNegative(managerTable.GetDouble( _
         tbl, selectedRowIndex, COLUMN_AMOUNT)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.ZeroOrNegativeOrderAmount, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Jumlah order harus lebih besar dari nol."
@@ -205,10 +205,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate vendor
     '=====================================================
-    If ValidationText.IsBlank(TableManager.GetText( _
+    If managerValidationText.IsBlank(managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_VENDOR)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyOrderVendorName, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Vendor tidak boleh kosong."
@@ -218,10 +218,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate order date
     '=====================================================
-    If Not IsDate(TableManager.GetValue( _
+    If Not IsDate(managerTable.GetValue( _
         tbl, selectedRowIndex, COLUMN_ORDER_DATE)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.InvalidOrderDate, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Tanggal order tidak valid."
@@ -231,11 +231,11 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate manufacturing plant
     '=====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
+    If managerValidationText.IsBlank(plantName) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyUpdatePlantLocation, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "Lokasi manufacturing plant tidak ditemukan."
@@ -245,10 +245,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Validate person in charge
     '=====================================================
-    If ValidationText.IsBlank(TableManager.GetText( _
+    If managerValidationText.IsBlank(managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_PIC)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyOrderPersonInCharge, _
             MODULE_NAME & ".CreateOrderUpdateRequest", _
             "PIC order tidak boleh kosong."
@@ -260,10 +260,10 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     Set proposedCatalogue = New Catalogue
 
-    proposedCatalogue.Name = TableManager.GetText( _
+    proposedCatalogue.Name = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_CATALOGUE)
 
-    proposedCatalogue.unitOfMeasurement = TableManager.GetText( _
+    proposedCatalogue.unitOfMeasurement = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_UOM)
 
     '=====================================================
@@ -278,7 +278,7 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     Set proposedVendor = New Vendor
 
-    proposedVendor.Name = TableManager.GetText( _
+    proposedVendor.Name = managerTable.GetText( _
         tbl, selectedRowIndex, COLUMN_VENDOR)
 
     '=====================================================
@@ -288,22 +288,22 @@ Private Sub CreateOrderUpdateRequest( _
 
     With proposedOrder
 
-        .poID = TableManager.GetText( _
+        .poID = managerTable.GetText( _
             tbl, selectedRowIndex, COLUMN_PO_ID)
 
-        .orderDate = TableManager.GetDate( _
+        .orderDate = managerTable.GetDate( _
             tbl, selectedRowIndex, COLUMN_ORDER_DATE)
 
-        .Amount = TableManager.GetDouble( _
+        .Amount = managerTable.GetDouble( _
             tbl, selectedRowIndex, COLUMN_AMOUNT)
 
-        .remarks = TableManager.GetText( _
+        .remarks = managerTable.GetText( _
             tbl, selectedRowIndex, COLUMN_REMARKS)
 
-        .personInCharge = TableManager.GetText( _
+        .personInCharge = managerTable.GetText( _
             tbl, selectedRowIndex, COLUMN_PIC)
 
-        .Status = TableManager.GetText( _
+        .Status = managerTable.GetText( _
             tbl, selectedRowIndex, COLUMN_STATUS)
 
         Set .Catalogue = proposedCatalogue
@@ -315,7 +315,7 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Show confirmation dialog
     '=====================================================
-    If Not FormManager.Confirm( _
+    If Not managerForm.Confirm( _
         "Apakah Anda yakin ingin membuat " & _
         "permintaan perubahan order berikut?" & _
         vbCrLf & vbCrLf & _
@@ -353,7 +353,7 @@ Private Sub CreateOrderUpdateRequest( _
     '=====================================================
     'Show success message
     '=====================================================
-    FormManager.ShowInfo _
+    managerForm.ShowInfo _
         "Permintaan perubahan order berhasil dibuat." & _
         vbCrLf & vbCrLf & _
         "UUID original: " & originalUUID & vbCrLf & _
@@ -370,14 +370,14 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set proposedOrder = Nothing
     Set proposedCatalogue = Nothing
     Set proposedPlant = Nothing
     Set proposedVendor = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateOrderUpdateRequest"
 
 End Sub
@@ -403,29 +403,29 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 1: Read and validate filter values
     '=====================================================
-    plantName = FormManager.GetCellText(Me, CELL_LOCATION)
+    plantName = managerForm.GetCellText(Me, CELL_LOCATION)
 
-    If ValidationText.IsBlank(plantName) Then
+    If managerValidationText.IsBlank(plantName) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyPlantLocation, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Lokasi belum dipilih."
 
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_FROM_DATE) Then
+    If Not managerForm.IsCellDate(Me, CELL_FROM_DATE) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.InvalidFromDate, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Dari tidak valid."
 
     End If
 
-    If Not FormManager.IsCellDate(Me, CELL_UNTIL_DATE) Then
+    If Not managerForm.IsCellDate(Me, CELL_UNTIL_DATE) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.InvalidUntilDate, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Hingga tidak valid."
@@ -433,16 +433,16 @@ Public Sub SearchOrder_Click()
     End If
 
     fromDateValue = CDate( _
-        FormManager.GetCellValue(Me, CELL_FROM_DATE) _
+        managerForm.GetCellValue(Me, CELL_FROM_DATE) _
     )
 
     untilDateValue = CDate( _
-        FormManager.GetCellValue(Me, CELL_UNTIL_DATE) _
+        managerForm.GetCellValue(Me, CELL_UNTIL_DATE) _
     )
 
     If fromDateValue > untilDateValue Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.FromDateExceedsUntilDate, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Tanggal Dari tidak boleh lebih besar " & _
@@ -453,7 +453,7 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 2: Get the order recap table
     '=====================================================
-    Set tbl = TableManager.GetTable(Me, TABLE_NAME)
+    Set tbl = managerTable.GetTable(Me, TABLE_NAME)
 
     '=====================================================
     'Step 3: Select orders
@@ -465,7 +465,7 @@ Public Sub SearchOrder_Click()
 
     If orders Is Nothing Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             sheetRecapPendingOrder.EmptyPendingOrderCollection, _
             MODULE_NAME & ".SearchOrder_Click", _
             "Hasil pencarian order tidak dapat dibaca."
@@ -475,7 +475,7 @@ Public Sub SearchOrder_Click()
     '=====================================================
     'Step 4: Clear existing table rows
     '=====================================================
-    TableManager.ClearRows tbl
+    managerTable.ClearRows tbl
 
     '=====================================================
     'Step 5: Fill the table
@@ -486,42 +486,42 @@ Public Sub SearchOrder_Click()
 
         rowNumber = rowNumber + 1
 
-        rowIndex = TableManager.AddRow(tbl)
+        rowIndex = managerTable.AddRow(tbl)
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_NO, rowNumber
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UUID, orderItem.UUID
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PO_ID, orderItem.poID
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_CATALOGUE, orderItem.Catalogue.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_AMOUNT, orderItem.Amount
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UOM, orderItem.Catalogue.unitOfMeasurement
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_VENDOR, orderItem.Vendor.Name
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_ORDER_DATE, orderItem.orderDate
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_STATUS, orderItem.Status
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_REMARKS, orderItem.remarks
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_PIC, orderItem.personInCharge
 
-        TableManager.SetValue _
+        managerTable.SetValue _
             tbl, rowIndex, COLUMN_UPDATE, "UPDATE"
 
     Next orderItem
@@ -539,13 +539,13 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set tbl = Nothing
     Set orderItem = Nothing
     Set orders = Nothing
 
-    ErrorManager.ShowError errInfo
+    managerError.ShowError errInfo
 
 End Sub
 
@@ -558,26 +558,26 @@ Private Sub ApplyOrderTableFormat( _
     Dim columnRange As Range
     Dim errInfo As ErrorInfo
 
-    If Not TableManager.HasRows(tbl) Then
+    If Not managerTable.HasRows(tbl) Then
         GoTo CleanUp
     End If
 
     '=====================================================
     'Order date format
     '=====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_ORDER_DATE, "dd-mmm-yyyy"
 
     '=====================================================
     'Order amount format
     '=====================================================
-    TableManager.FormatColumn _
+    managerTable.FormatColumn _
         tbl, COLUMN_AMOUNT, "#,##0.00"
 
     '=====================================================
     'UPDATE column format
     '=====================================================
-    Set columnRange = TableManager.GetColumnRange( _
+    Set columnRange = managerTable.GetColumnRange( _
         tbl, COLUMN_UPDATE)
 
     If Not columnRange Is Nothing Then
@@ -606,11 +606,11 @@ CleanUp:
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     Set columnRange = Nothing
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".ApplyOrderTableFormat"
 
 End Sub

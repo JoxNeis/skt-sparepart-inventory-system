@@ -1,4 +1,4 @@
-Attribute VB_Name = "DatabaseManager"
+Attribute VB_Name = "managerDatabase"
 Option Explicit
 
 ' =========================================================
@@ -7,7 +7,7 @@ Option Explicit
 ' Connection, transaction and query helpers.
 '
 ' LAYERING
-'   Sheet    -> Service -> DAO -> DatabaseManager
+'   Sheet    -> Service -> DAO -> managerDatabase
 '
 '   Service : gets the connection, owns the transaction,
 '             validates, runs the business logic and checks
@@ -23,21 +23,21 @@ Option Explicit
 '   Dim inTransaction As Boolean
 '   Dim errInfo As ErrorInfo
 '
-'   Set conn = DatabaseManager.GetConnection()
-'   DatabaseManager.BeginTransaction conn
+'   Set conn = managerDatabase.GetConnection()
+'   managerDatabase.BeginTransaction conn
 '   inTransaction = True
 '
 '   affected = daoOrder.CreateOrder(conn, ...)
 '   ...
 '
-'   DatabaseManager.CommitTransaction conn
+'   managerDatabase.CommitTransaction conn
 '   inTransaction = False
 '   Exit Sub
 '
 ' ErrorHandler:
-'   errInfo = ErrorManager.CaptureError()
-'   If inTransaction Then DatabaseManager.RollbackTransaction conn
-'   ErrorManager.Rethrow errInfo, MODULE_NAME & ".CreateOrder", "..."
+'   errInfo = managerError.CaptureError()
+'   If inTransaction Then managerDatabase.RollbackTransaction conn
+'   managerError.Rethrow errInfo, MODULE_NAME & ".CreateOrder", "..."
 '
 ' DAO TEMPLATE
 '
@@ -45,17 +45,17 @@ Option Explicit
 '       ByVal conn As ADODB.connection, ...) As Long
 '
 '       Dim cmd As ADODB.Command
-'       Set cmd = DatabaseManager.CreateCommand(conn, "create_order")
-'       DatabaseManager.AddTextParameter cmd, "p_uuid", uuid
-'       CreateOrder = DatabaseManager.ExecuteNonQuery(cmd)
+'       Set cmd = managerDatabase.CreateCommand(conn, "create_order")
+'       managerDatabase.AddTextParameter cmd, "p_uuid", uuid
+'       CreateOrder = managerDatabase.ExecuteNonQuery(cmd)
 '   End Function
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DatabaseManager"
+Private Const MODULE_NAME As String = "managerDatabase"
 
 ' =========================================================
 ' ERROR CODES (10100 - 10199)
-' Usage: ErrorManager.ThrowError DatabaseManager.ConnectionFailed, ...
+' Usage: managerError.ThrowError managerDatabase.ConnectionFailed, ...
 ' =========================================================
 Public Const ConnectionFailed As Long = 10101       ' connection could not be created
 Public Const ConnectionNotOpen As Long = 10102      ' conn.State <> adStateOpen
@@ -88,15 +88,15 @@ Public Function GetConnection() As ADODB.connection
     Dim errInfo As ErrorInfo
 
     If mConnection Is Nothing Then
-        Set mConnection = OpenAccessConnection(pConfig.databasePath())
+        Set mConnection = OpenAccessConnection(coreConfig.databasePath())
     ElseIf mConnection.State <> adStateOpen Then
         Set mConnection = Nothing
-        Set mConnection = OpenAccessConnection(pConfig.databasePath())
+        Set mConnection = OpenAccessConnection(coreConfig.databasePath())
     End If
 
     If mConnection Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.ConnectionFailed, _
+        managerError.ThrowError _
+            managerDatabase.ConnectionFailed, _
             MODULE_NAME & ".GetConnection", _
             "Koneksi dengan database gagal dibuat."
     End If
@@ -106,12 +106,12 @@ Public Function GetConnection() As ADODB.connection
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".GetConnection", _
         "Gagal mendapatkan koneksi database.", _
-        DatabaseManager.ConnectionFailed
+        managerDatabase.ConnectionFailed
 
 End Function
 
@@ -122,15 +122,15 @@ Public Sub RequireConnection( _
     ByVal errorSource As String)
 
     If conn Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyConnection, _
+        managerError.ThrowError _
+            managerDatabase.EmptyConnection, _
             errorSource, _
             "Koneksi database tidak boleh kosong."
     End If
 
     If conn.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.ConnectionNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.ConnectionNotOpen, _
             errorSource, _
             "Koneksi database belum terbuka."
     End If
@@ -164,8 +164,8 @@ Private Function OpenAccessConnection( _
     Dim errInfo As ErrorInfo
 
     If Dir(databasePath) = "" Then
-        ErrorManager.ThrowError _
-            DatabaseManager.DatabaseFileNotFound, _
+        managerError.ThrowError _
+            managerDatabase.DatabaseFileNotFound, _
             MODULE_NAME & ".OpenAccessConnection", _
             "File database (Microsoft Access) tidak ditemukan: " & databasePath
     End If
@@ -182,12 +182,12 @@ Private Function OpenAccessConnection( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".OpenAccessConnection", _
         "Gagal membuat koneksi database.", _
-        DatabaseManager.ConnectionFailed
+        managerDatabase.ConnectionFailed
 
 End Function
 
@@ -217,7 +217,7 @@ End Sub
 
 
 ' Safe to call from an error handler: never raises.
-' Capture the error with ErrorManager.CaptureError() BEFORE
+' Capture the error with managerError.CaptureError() BEFORE
 ' calling this, because On Error clears the Err object.
 Public Sub RollbackTransaction( _
     ByVal conn As ADODB.connection)
@@ -249,9 +249,9 @@ Public Function CreateCommand( _
 
     RequireConnection conn, MODULE_NAME & ".CreateCommand"
 
-    If ValidationText.IsBlank(queryName) Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyQueryName, _
+    If managerValidationText.IsBlank(queryName) Then
+        managerError.ThrowError _
+            managerDatabase.EmptyQueryName, _
             MODULE_NAME & ".CreateCommand", _
             "Nama query tidak boleh kosong."
     End If
@@ -425,8 +425,8 @@ Public Function ExecuteRecordset( _
     End With
 
     If rs.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.RecordsetNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.RecordsetNotOpen, _
             MODULE_NAME & ".ExecuteRecordset", _
             "Recordset query '" & cmd.CommandText & "' tidak terbuka."
     End If
@@ -479,7 +479,7 @@ Public Function HasField( _
 End Function
 
 
-' Raise DatabaseManager.FieldNotFound for the first missing
+' Raise managerDatabase.FieldNotFound for the first missing
 ' field in requiredFields (an Array).
 Public Sub ValidateFields( _
     ByVal rs As ADODB.recordset, _
@@ -491,8 +491,8 @@ Public Sub ValidateFields( _
 
     For Each fieldName In requiredFields
         If Not HasField(rs, CStr(fieldName)) Then
-            ErrorManager.ThrowError _
-                DatabaseManager.FieldNotFound, _
+            managerError.ThrowError _
+                managerDatabase.FieldNotFound, _
                 MODULE_NAME & ".ValidateFields", _
                 "Field '" & CStr(fieldName) & _
                 "' tidak ditemukan pada hasil query."
@@ -509,8 +509,8 @@ Public Function FieldValue( _
     RequireRecordset rs, MODULE_NAME & ".FieldValue"
 
     If Not HasField(rs, fieldName) Then
-        ErrorManager.ThrowError _
-            DatabaseManager.FieldNotFound, _
+        managerError.ThrowError _
+            managerDatabase.FieldNotFound, _
             MODULE_NAME & ".FieldValue", _
             "Field '" & fieldName & "' tidak ditemukan pada hasil query."
     End If
@@ -551,7 +551,7 @@ Public Function FieldText( _
 End Function
 
 
-' Null -> 0. Non-numeric -> DatabaseManager.InvalidFieldNumber.
+' Null -> 0. Non-numeric -> managerDatabase.InvalidFieldNumber.
 Public Function FieldDouble( _
     ByVal rs As ADODB.recordset, _
     ByVal fieldName As String) As Double
@@ -566,8 +566,8 @@ Public Function FieldDouble( _
     End If
 
     If Not IsNumeric(value) Then
-        ErrorManager.ThrowError _
-            DatabaseManager.InvalidFieldNumber, _
+        managerError.ThrowError _
+            managerDatabase.InvalidFieldNumber, _
             MODULE_NAME & ".FieldDouble", _
             "Field '" & fieldName & "' bukan angka yang valid."
     End If
@@ -577,7 +577,7 @@ Public Function FieldDouble( _
 End Function
 
 
-' Null -> 0. Non-numeric -> DatabaseManager.InvalidFieldNumber.
+' Null -> 0. Non-numeric -> managerDatabase.InvalidFieldNumber.
 Public Function FieldLong( _
     ByVal rs As ADODB.recordset, _
     ByVal fieldName As String) As Long
@@ -592,8 +592,8 @@ Public Function FieldLong( _
     End If
 
     If Not IsNumeric(value) Then
-        ErrorManager.ThrowError _
-            DatabaseManager.InvalidFieldNumber, _
+        managerError.ThrowError _
+            managerDatabase.InvalidFieldNumber, _
             MODULE_NAME & ".FieldLong", _
             "Field '" & fieldName & "' bukan angka yang valid."
     End If
@@ -618,8 +618,8 @@ Public Function FieldDate( _
     End If
 
     If Not IsDate(value) Then
-        ErrorManager.ThrowError _
-            DatabaseManager.InvalidFieldDate, _
+        managerError.ThrowError _
+            managerDatabase.InvalidFieldDate, _
             MODULE_NAME & ".FieldDate", _
             "Field '" & fieldName & "' bukan tanggal yang valid."
     End If
@@ -656,8 +656,8 @@ Private Sub RequireCommand( _
     ByVal errorSource As String)
 
     If cmd Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyCommand, _
+        managerError.ThrowError _
+            managerDatabase.EmptyCommand, _
             errorSource, _
             "Command database tidak boleh kosong."
     End If
@@ -670,15 +670,15 @@ Private Sub RequireRecordset( _
     ByVal errorSource As String)
 
     If rs Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.EmptyRecordset, _
+        managerError.ThrowError _
+            managerDatabase.EmptyRecordset, _
             errorSource, _
             "Recordset tidak boleh kosong."
     End If
 
     If rs.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.RecordsetNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.RecordsetNotOpen, _
             errorSource, _
             "Recordset tidak terbuka."
     End If

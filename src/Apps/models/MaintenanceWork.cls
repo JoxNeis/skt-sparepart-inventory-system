@@ -11,21 +11,27 @@ Option Explicit
 ' =========================================================
 ' MODEL - MAINTENANCE WORK
 ' Table      : maintenance_works
-' Error codes: entitiesMaintenanceWork (ErrorCodesEntities.bas)
+' Error codes: entitiesMaintenanceWork (managerErrorCodesEntities.bas)
 '
-' Header of a mobile maintenance work (one job done on a
-' date). Its lines (tasks and the spareparts used) are the
-' MaintenanceWorkDetail objects in Details.
+' Detail of a MAINTENANCE transaction - one mobile
+' maintenance job done on a date. Its lines (tasks and the
+' spareparts used) are the MaintenanceWorkDetail objects in
+' Details. The document number (UUID, MTW-...) and the plant
+' live on the Transaction header (1:1).
+'
+' Removed from the old model:
+'   UUID -> Transaction.UUID ([uuid] column dropped)
 ' =========================================================
 
 Private Const CLASS_NAME As String = "MaintenanceWork"
 
-Private Const UUID_MAX_LENGTH As Long = 36
+Private Const TRANSACTION_TYPE As String = "MAINTENANCE"
+
 Private Const NAME_MAX_LENGTH As Long = 255
 Private Const TYPE_MAX_LENGTH As Long = 50
 
 Private mId As Long
-Private mUUID As String
+Private mTransaction As Transaction
 Private mMaintenanceName As String
 Private mMaintenanceDate As Date
 Private mMaintenanceType As String
@@ -50,8 +56,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWork.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -63,18 +69,33 @@ End Property
 
 
 ' =========================================================
-' UUID                                  [uuid] TEXT(36) NOT NULL UNIQUE
+' TRANSACTION                           [transaction_id] NOT NULL UNIQUE
+' Must be a MAINTENANCE header (when its type is set).
 ' =========================================================
-Public Property Get UUID() As String
-    UUID = mUUID
+Public Property Get Transaction() As Transaction
+    Set Transaction = mTransaction
 End Property
 
-Public Property Let UUID(ByVal value As String)
+Public Property Set Transaction(ByVal value As Transaction)
 
-    mUUID = UCase$(CheckText(value, "UUID", "Nomor dokumen", _
-        UUID_MAX_LENGTH, _
-        entitiesMaintenanceWork.EmptyUUID, _
-        entitiesMaintenanceWork.UUIDTooLong))
+    If value Is Nothing Then
+        managerError.ThrowError _
+            entitiesMaintenanceWork.EmptyTransaction, _
+            CLASS_NAME & ".Transaction", _
+            CLASS_NAME & ": Transaksi tidak boleh kosong."
+    End If
+
+    If Len(value.TransactionType) > 0 Then
+        If value.TransactionType <> TRANSACTION_TYPE Then
+            managerError.ThrowError _
+                entitiesMaintenanceWork.WrongTransactionType, _
+                CLASS_NAME & ".Transaction", _
+                CLASS_NAME & ": Tipe transaksi harus " & _
+                TRANSACTION_TYPE & "."
+        End If
+    End If
+
+    Set mTransaction = value
 
 End Property
 
@@ -105,15 +126,15 @@ End Property
 
 Public Property Let MaintenanceDate(ByVal value As Date)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWork.EmptyMaintenanceDate, _
             CLASS_NAME & ".MaintenanceDate", _
             CLASS_NAME & ": Tanggal maintenance tidak boleh kosong."
     End If
 
     If DateValue(value) > VBA.Date Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesMaintenanceWork.FutureMaintenanceDate, _
             CLASS_NAME & ".MaintenanceDate", _
             CLASS_NAME & _
@@ -159,7 +180,7 @@ End Property
 Public Sub AddDetail(ByVal detail As MaintenanceWorkDetail)
 
     If detail Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesMaintenanceWork.EmptyDetail, _
             CLASS_NAME & ".AddDetail", _
             CLASS_NAME & ": Detail maintenance tidak boleh kosong."
@@ -169,7 +190,7 @@ Public Sub AddDetail(ByVal detail As MaintenanceWorkDetail)
         If detail.MaintenanceWorkId = 0 Then
             detail.MaintenanceWorkId = mId
         ElseIf detail.MaintenanceWorkId <> mId Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesMaintenanceWork.DetailOfOtherWork, _
                 CLASS_NAME & ".AddDetail", _
                 CLASS_NAME & _
@@ -184,6 +205,23 @@ End Sub
 Public Sub ClearDetails()
     Set mDetails = New Collection
 End Sub
+
+
+' =========================================================
+' CALCULATED PROPERTIES
+' =========================================================
+
+' Document number of the MAINTENANCE header ("" when not set).
+Public Property Get UUID() As String
+    If Not mTransaction Is Nothing Then UUID = mTransaction.UUID
+End Property
+
+' Plant of the MAINTENANCE header (Nothing when not set).
+Public Property Get ManufacturingPlant() As ManufacturingPlant
+    If Not mTransaction Is Nothing Then
+        Set ManufacturingPlant = mTransaction.ManufacturingPlant
+    End If
+End Property
 
 
 ' =========================================================
@@ -204,16 +242,16 @@ Private Function CheckText( _
     value = Trim$(value)
 
     If emptyCode <> 0 Then
-        If ValidationText.IsBlank(value) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(value) Then
+            managerError.ThrowError _
                 emptyCode, _
                 CLASS_NAME & "." & propertyName, _
                 CLASS_NAME & ": " & label & " tidak boleh kosong."
         End If
     End If
 
-    If ValidationText.IsLongerThan(value, maxLength) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, maxLength) Then
+        managerError.ThrowError _
             tooLongCode, _
             CLASS_NAME & "." & propertyName, _
             CLASS_NAME & ": " & label & " maksimal " & _

@@ -11,10 +11,11 @@ Option Explicit
 ' =========================================================
 ' MODEL - TRANSACTION (document header)
 ' Table      : transactions
-' Error codes: entitiesTransaction (ErrorCodesEntities.bas)
+' Error codes: entitiesTransaction (managerErrorCodesEntities.bas)
 '
-' Shared by every document (ORDER, RECEIVE, REQUEST). Each
-' header has exactly one detail: Order, Receive or Request.
+' Shared by every document (ORDER, RECEIVE, REQUEST,
+' MAINTENANCE). Each header has exactly one detail (1:1):
+' Order, Receive, Request or MaintenanceWork.
 '
 ' Life:  DRAFT    -> ActivatedAt = 0
 '        ACTIVE   -> ActivatedAt set, ReversedAt = 0
@@ -33,6 +34,7 @@ Private Const CLASS_NAME As String = "Transaction"
 Private Const TYPE_ORDER As String = "ORDER"
 Private Const TYPE_RECEIVE As String = "RECEIVE"
 Private Const TYPE_REQUEST As String = "REQUEST"
+Private Const TYPE_MAINTENANCE As String = "MAINTENANCE"
 
 Private Const STATUS_DRAFT As String = "DRAFT"
 Private Const STATUS_ACTIVE As String = "ACTIVE"
@@ -65,8 +67,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesTransaction.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -96,7 +98,7 @@ End Property
 
 ' =========================================================
 ' TRANSACTION TYPE                      [transaction_type] TEXT(15) NOT NULL
-' ORDER / RECEIVE / REQUEST
+' ORDER / RECEIVE / REQUEST / MAINTENANCE
 ' =========================================================
 Public Property Get TransactionType() As String
     TransactionType = mTransactionType
@@ -106,14 +108,15 @@ Public Property Let TransactionType(ByVal value As String)
 
     value = UCase$(Trim$(value))
 
-    If Not ValidationText.IsInList(value, _
-        Array(TYPE_ORDER, TYPE_RECEIVE, TYPE_REQUEST)) Then
+    If Not managerValidationText.IsInList(value, _
+        Array(TYPE_ORDER, TYPE_RECEIVE, TYPE_REQUEST, TYPE_MAINTENANCE)) Then
 
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesTransaction.InvalidTransactionType, _
             CLASS_NAME & ".TransactionType", _
             CLASS_NAME & _
-            ": Tipe transaksi harus ORDER, RECEIVE, atau REQUEST."
+            ": Tipe transaksi harus ORDER, RECEIVE, REQUEST, atau " & _
+            "MAINTENANCE."
     End If
 
     mTransactionType = value
@@ -131,7 +134,7 @@ End Property
 Public Property Set ManufacturingPlant(ByVal value As ManufacturingPlant)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesTransaction.EmptyManufacturingPlant, _
             CLASS_NAME & ".ManufacturingPlant", _
             CLASS_NAME & ": Plant tidak boleh kosong."
@@ -296,7 +299,7 @@ Public Function IsSameAs(ByVal other As Transaction) As Boolean
     If mId > 0 And other.Id > 0 Then
         IsSameAs = (mId = other.Id)
     ElseIf Len(mUUID) > 0 And Len(other.UUID) > 0 Then
-        IsSameAs = ValidationText.IsSameText(mUUID, other.UUID)
+        IsSameAs = managerValidationText.IsSameText(mUUID, other.UUID)
     End If
 
 End Function
@@ -320,16 +323,16 @@ Private Function CheckText( _
     value = Trim$(value)
 
     If emptyCode <> 0 Then
-        If ValidationText.IsBlank(value) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(value) Then
+            managerError.ThrowError _
                 emptyCode, _
                 CLASS_NAME & "." & propertyName, _
                 CLASS_NAME & ": " & label & " tidak boleh kosong."
         End If
     End If
 
-    If ValidationText.IsLongerThan(value, maxLength) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, maxLength) Then
+        managerError.ThrowError _
             tooLongCode, _
             CLASS_NAME & "." & propertyName, _
             CLASS_NAME & ": " & label & " maksimal " & _

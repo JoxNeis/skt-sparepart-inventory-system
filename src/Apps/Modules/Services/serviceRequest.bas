@@ -13,7 +13,7 @@ Private Const MODULE_NAME As String = "SERVICE_REQUEST"
 
 ' =========================================================
 ' ERROR CODES (17700 - 17799)
-' Usage: ErrorManager.ThrowError serviceRequest.EmptyRequest, ...
+' Usage: managerError.ThrowError serviceRequest.EmptyRequest, ...
 ' =========================================================
 Public Const EmptyRequest As Long = 17701                       ' Request object is Nothing
 Public Const EmptyMobilePost As Long = 17702                    ' MobilePost object is Nothing
@@ -75,21 +75,21 @@ Public Function CreateRequest( _
     ' Step 1: Validate request object
     ' =====================================================
     If requestItem Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceRequest.EmptyRequest, _
             MODULE_NAME & ".CreateRequest", _
             "Request tidak boleh kosong."
     End If
 
     If requestItem.MobilePost Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceRequest.EmptyMobilePost, _
             MODULE_NAME & ".CreateRequest", _
             "Mobile post request tidak boleh kosong."
     End If
 
     If requestItem.MobilePost.Plant Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceRequest.EmptyPlant, _
             MODULE_NAME & ".CreateRequest", _
             "Manufacturing plant request " & _
@@ -97,7 +97,7 @@ Public Function CreateRequest( _
     End If
 
     If requestItem.Catalogue Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceRequest.EmptyCatalogue, _
             MODULE_NAME & ".CreateRequest", _
             "Catalogue request tidak boleh kosong."
@@ -113,44 +113,44 @@ Public Function CreateRequest( _
     ' =====================================================
     ' Step 3: Validate request properties
     ' =====================================================
-    If ValidationNumeric.IsZeroOrNegative(requestItem.orderDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(requestItem.orderDate) Then
+        managerError.ThrowError _
             serviceRequest.EmptyRequestDate, _
             MODULE_NAME & ".CreateRequest", _
             "Tanggal request tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(requestItem.Amount) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(requestItem.Amount) Then
+        managerError.ThrowError _
             serviceRequest.InvalidRequestAmount, _
             MODULE_NAME & ".CreateRequest", _
             "Jumlah request harus lebih besar dari nol."
     End If
 
-    If ValidationText.IsBlank(requestItem.MobilePost.Name) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestItem.MobilePost.Name) Then
+        managerError.ThrowError _
             serviceRequest.EmptyMobilePostName, _
             MODULE_NAME & ".CreateRequest", _
             "Nama mobile post tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(requestItem.MobilePost.Plant.Name) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestItem.MobilePost.Plant.Name) Then
+        managerError.ThrowError _
             serviceRequest.EmptyManufacturingPlantName, _
             MODULE_NAME & ".CreateRequest", _
             "Nama manufacturing plant " & _
             "tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(requestItem.Catalogue.Name) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestItem.Catalogue.Name) Then
+        managerError.ThrowError _
             serviceRequest.EmptyCatalogueName, _
             MODULE_NAME & ".CreateRequest", _
             "Nama catalogue tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(requestItem.personInCharge) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(requestItem.personInCharge) Then
+        managerError.ThrowError _
             serviceRequest.EmptyPersonInCharge, _
             MODULE_NAME & ".CreateRequest", _
             "Person in charge tidak boleh kosong."
@@ -159,23 +159,23 @@ Public Function CreateRequest( _
     ' =====================================================
     ' Step 4: Open connection and begin transaction
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     If conn Is Nothing Then
-        ErrorManager.ThrowError _
-            DatabaseManager.ConnectionFailed, _
+        managerError.ThrowError _
+            managerDatabase.ConnectionFailed, _
             MODULE_NAME & ".CreateRequest", _
             "Connection database tidak berhasil dibuat."
     End If
 
     If conn.State <> adStateOpen Then
-        ErrorManager.ThrowError _
-            DatabaseManager.ConnectionNotOpen, _
+        managerError.ThrowError _
+            managerDatabase.ConnectionNotOpen, _
             MODULE_NAME & ".CreateRequest", _
             "Connection database tidak terbuka."
     End If
 
-    DatabaseManager.BeginTransaction conn
+    managerDatabase.BeginTransaction conn
     inTransaction = True
 
     ' =====================================================
@@ -202,7 +202,7 @@ Public Function CreateRequest( _
         availableStockAfterRequest = _
             currentStock - requestItem.Amount
 
-        If ValidationNumeric.IsNegative(availableStockAfterRequest) Then
+        If managerValidationNumeric.IsNegative(availableStockAfterRequest) Then
 
             validationMessage = _
                 "Jumlah request melebihi stok yang tersedia."
@@ -232,7 +232,7 @@ Public Function CreateRequest( _
                 "Kekurangan Stok: " & _
                 Format$(Abs(availableStockAfterRequest), "#,##0.00")
 
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 serviceRequest.RequestAmountExceedsStock, _
                 MODULE_NAME & ".CreateRequest", _
                 validationMessage
@@ -257,16 +257,16 @@ Public Function CreateRequest( _
 
     transactionUUID = Trim$(transactionUUID)
 
-    If ValidationText.IsBlank(transactionUUID) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
             serviceRequest.EmptyTransactionUUID, _
             MODULE_NAME & ".CreateRequest", _
             "UUID transaksi request tidak berhasil dibuat."
     End If
 
     If isCreatedForUpdate Then
-        If ValidationText.IsSameText(originalUUID, transactionUUID) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsSameText(originalUUID, transactionUUID) Then
+            managerError.ThrowError _
                 serviceRequest.SameOriginalProposedUUID, _
                 MODULE_NAME & ".CreateRequest", _
                 "UUID transaksi original dan proposed " & _
@@ -279,8 +279,8 @@ Public Function CreateRequest( _
     ' =====================================================
     affected = daoRequest.CreateRequest(conn, transactionUUID, requestItem)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsLessThan(affected, 1) Then
+        managerError.ThrowError _
             serviceRequest.NoRowAffectedCreateRequest, _
             MODULE_NAME & ".CreateRequest", _
             "Request tidak tersimpan. Transaction, " & _
@@ -288,8 +288,8 @@ Public Function CreateRequest( _
             "tidak ditemukan."
     End If
 
-    If ValidationNumeric.IsGreaterThan(affected, 1) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsGreaterThan(affected, 1) Then
+        managerError.ThrowError _
             serviceRequest.MultipleRowsAffectedCreateRequest, _
             MODULE_NAME & ".CreateRequest", _
             "Penyimpanan request memengaruhi lebih " & _
@@ -340,7 +340,7 @@ Public Function CreateRequest( _
     ' =====================================================
     ' Step 11: Commit
     ' =====================================================
-    DatabaseManager.CommitTransaction conn
+    managerDatabase.CommitTransaction conn
     inTransaction = False
 
     requestItem.UUID = transactionUUID
@@ -350,13 +350,13 @@ Public Function CreateRequest( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
     If inTransaction Then
-        DatabaseManager.RollbackTransaction conn
+        managerDatabase.RollbackTransaction conn
     End If
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateRequest", _
         "Gagal membuat request."
 
@@ -380,29 +380,29 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
     ' =====================================================
     ' Step 1: Validate
     ' =====================================================
-    If ValidationText.IsBlank(manufacturingPlantName) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(manufacturingPlantName) Then
+        managerError.ThrowError _
             serviceRequest.EmptyManufacturingPlantName, _
             MODULE_NAME & ".GetRequestsByManufacturingPlantAndOrderDate", _
             "Nama manufacturing plant tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(fromDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(fromDate) Then
+        managerError.ThrowError _
             serviceRequest.EmptyFromDate, _
             MODULE_NAME & ".GetRequestsByManufacturingPlantAndOrderDate", _
             "Tanggal awal tidak boleh kosong."
     End If
 
-    If ValidationNumeric.IsZeroOrNegative(untilDate) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(untilDate) Then
+        managerError.ThrowError _
             serviceRequest.EmptyUntilDate, _
             MODULE_NAME & ".GetRequestsByManufacturingPlantAndOrderDate", _
             "Tanggal akhir tidak boleh kosong."
     End If
 
     If fromDate > untilDate Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             serviceRequest.InvalidDateRange, _
             MODULE_NAME & ".GetRequestsByManufacturingPlantAndOrderDate", _
             "Tanggal awal tidak boleh lebih besar " & _
@@ -412,7 +412,7 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
     ' =====================================================
     ' Step 2: Query (dates are passed as given, as before)
     ' =====================================================
-    Set conn = DatabaseManager.GetConnection()
+    Set conn = managerDatabase.GetConnection()
 
     Set GetRequestsByManufacturingPlantAndOrderDate = _
         daoRequest.GetRequestsByManufacturingPlantAndOrderDate( _
@@ -421,9 +421,9 @@ Public Function GetRequestsByManufacturingPlantAndOrderDate( _
     Exit Function
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & _
         ".GetRequestsByManufacturingPlantAndOrderDate", _
         "Gagal mengambil data request."

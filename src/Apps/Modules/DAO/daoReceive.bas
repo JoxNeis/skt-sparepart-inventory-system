@@ -23,20 +23,20 @@ Public Function CreateReceive( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_receive")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_receive")
 
-    DatabaseManager.AddTextParameter cmd, "p_receive_transaction_uuid", transactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_order_transaction_uuid", orderTransactionUUID
-    DatabaseManager.AddDateParameter cmd, "p_arrival_date", receiveItem.ArrivalDate
-    DatabaseManager.AddDateParameter cmd, "p_verification_date", receiveItem.VerificationDate
-    DatabaseManager.AddDoubleParameter cmd, "p_receive_total_amount", receiveItem.totalReceiveAmount
-    DatabaseManager.AddDoubleParameter cmd, "p_receive_ok_amount", receiveItem.okAmount
-    DatabaseManager.AddDoubleParameter cmd, "p_receive_not_ok_amount", receiveItem.notOKAmount
-    DatabaseManager.AddTextParameter cmd, "p_receive_remarks", receiveItem.remarks
-    DatabaseManager.AddTextParameter cmd, "p_receive_system_remarks", receiveItem.SystemRemarks
-    DatabaseManager.AddTextParameter cmd, "p_receive_person_in_charge", receiveItem.personInCharge
+    managerDatabase.AddTextParameter cmd, "p_receive_transaction_uuid", transactionUUID
+    managerDatabase.AddTextParameter cmd, "p_order_transaction_uuid", orderTransactionUUID
+    managerDatabase.AddDateParameter cmd, "p_arrival_date", receiveItem.ArrivalDate
+    managerDatabase.AddDateParameter cmd, "p_verification_date", receiveItem.VerificationDate
+    managerDatabase.AddDoubleParameter cmd, "p_receive_total_amount", receiveItem.totalReceiveAmount
+    managerDatabase.AddDoubleParameter cmd, "p_receive_ok_amount", receiveItem.okAmount
+    managerDatabase.AddDoubleParameter cmd, "p_receive_not_ok_amount", receiveItem.notOKAmount
+    managerDatabase.AddTextParameter cmd, "p_receive_remarks", receiveItem.remarks
+    managerDatabase.AddTextParameter cmd, "p_receive_system_remarks", receiveItem.SystemRemarks
+    managerDatabase.AddTextParameter cmd, "p_receive_person_in_charge", receiveItem.personInCharge
 
-    CreateReceive = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateReceive = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -61,14 +61,14 @@ Public Function SelectReceives( _
 
     Dim poIdValue As String
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_receive_by_manufacturing_plant_name_and_arrival_date")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set receives = New Collection
 
@@ -83,26 +83,26 @@ Public Function SelectReceives( _
         ' -------------------------------------------------
         ' Plant object
         ' -------------------------------------------------
-        plantItem.Name = DatabaseManager.FieldText(rs, "manufacturing_plant_name")
+        plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
 
         ' -------------------------------------------------
         ' Catalogue object
         ' -------------------------------------------------
-        catalogueItem.Name = DatabaseManager.FieldText(rs, "catalogue_name")
-        catalogueItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
+        catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
+        catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
 
         ' -------------------------------------------------
         ' Vendor object
         ' -------------------------------------------------
-        vendorItem.Name = DatabaseManager.FieldText(rs, "vendor_name")
+        vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
 
         ' -------------------------------------------------
         ' Order object
         ' -------------------------------------------------
-        orderItem.Id = DatabaseManager.FieldLong(rs, "order_id")
-        orderItem.UUID = DatabaseManager.FieldText(rs, "order_uuid")
+        orderItem.Id = managerDatabase.FieldLong(rs, "order_id")
+        orderItem.UUID = managerDatabase.FieldText(rs, "order_uuid")
 
-        poIdValue = DatabaseManager.FieldText(rs, "order_poid")
+        poIdValue = managerDatabase.FieldText(rs, "order_poid")
         If Len(poIdValue) > 0 Then
             orderItem.poID = poIdValue
         End If
@@ -111,35 +111,35 @@ Public Function SelectReceives( _
         Set orderItem.Catalogue = catalogueItem
         Set orderItem.Vendor = vendorItem
 
-        orderItem.orderDate = DatabaseManager.FieldDate(rs, "order_date")
-        orderItem.Amount = DatabaseManager.FieldDouble(rs, "order_amount")
-        orderItem.remarks = DatabaseManager.FieldText(rs, "order_remarks")
+        orderItem.orderDate = managerDatabase.FieldDate(rs, "order_date")
+        orderItem.Amount = managerDatabase.FieldDouble(rs, "order_amount")
+        orderItem.remarks = managerDatabase.FieldText(rs, "order_remarks")
 
         ' -------------------------------------------------
         ' Receive object
         ' -------------------------------------------------
-        receiveItem.Id = DatabaseManager.FieldLong(rs, "receive_id")
-        receiveItem.UUID = DatabaseManager.FieldText(rs, "transaction_uuid")
+        receiveItem.Id = managerDatabase.FieldLong(rs, "receive_id")
+        receiveItem.UUID = managerDatabase.FieldText(rs, "transaction_uuid")
 
         Set receiveItem.Order = orderItem
 
-        receiveItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
-        receiveItem.RemainingOrder = DatabaseManager.FieldDouble(rs, "total_remaining_order")
-        receiveItem.totalReceiveAmount = DatabaseManager.FieldDouble(rs, "total_receive_amount")
-        receiveItem.okAmount = DatabaseManager.FieldDouble(rs, "total_ok_amount")
-        receiveItem.notOKAmount = DatabaseManager.FieldDouble(rs, "total_not_ok_amount")
+        receiveItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
+        receiveItem.RemainingOrder = managerDatabase.FieldDouble(rs, "total_remaining_order")
+        receiveItem.totalReceiveAmount = managerDatabase.FieldDouble(rs, "total_receive_amount")
+        receiveItem.okAmount = managerDatabase.FieldDouble(rs, "total_ok_amount")
+        receiveItem.notOKAmount = managerDatabase.FieldDouble(rs, "total_not_ok_amount")
 
-        If Not DatabaseManager.FieldIsNull(rs, "receive_arrival_date") Then
-            receiveItem.ArrivalDate = DatabaseManager.FieldDate(rs, "receive_arrival_date")
+        If Not managerDatabase.FieldIsNull(rs, "receive_arrival_date") Then
+            receiveItem.ArrivalDate = managerDatabase.FieldDate(rs, "receive_arrival_date")
         End If
 
-        If Not DatabaseManager.FieldIsNull(rs, "receive_verification_date") Then
-            receiveItem.VerificationDate = DatabaseManager.FieldDate(rs, "receive_verification_date")
+        If Not managerDatabase.FieldIsNull(rs, "receive_verification_date") Then
+            receiveItem.VerificationDate = managerDatabase.FieldDate(rs, "receive_verification_date")
         End If
 
-        receiveItem.remarks = DatabaseManager.FieldText(rs, "receive_remarks")
-        receiveItem.SystemRemarks = DatabaseManager.FieldText(rs, "receive_system_remarks")
-        receiveItem.personInCharge = DatabaseManager.FieldText(rs, "receive_person_in_charge")
+        receiveItem.remarks = managerDatabase.FieldText(rs, "receive_remarks")
+        receiveItem.SystemRemarks = managerDatabase.FieldText(rs, "receive_system_remarks")
+        receiveItem.personInCharge = managerDatabase.FieldText(rs, "receive_person_in_charge")
 
         ' Transaction UUID should be unique for each receive.
         receives.Add _
@@ -155,7 +155,7 @@ Public Function SelectReceives( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectReceives = receives
 
@@ -183,14 +183,14 @@ Public Function SelectPendingOrderReceive( _
 
     Dim poIdValue As String
 
-    Set cmd = DatabaseManager.CreateCommand(conn, _
+    Set cmd = managerDatabase.CreateCommand(conn, _
         "select_pending_order_by_manufacturing_plant_name_and_order_date")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
+    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
+    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set receives = New Collection
 
@@ -202,32 +202,32 @@ Public Function SelectPendingOrderReceive( _
         Set orderItem = New Order
         Set receiveItem = New Receive
 
-        plantItem.Name = DatabaseManager.FieldText(rs, "manufacturing_plant_name")
+        plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
 
-        catalogueItem.Name = DatabaseManager.FieldText(rs, "catalogue_name")
-        catalogueItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
+        catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
+        catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
 
-        vendorItem.Name = DatabaseManager.FieldText(rs, "vendor_name")
+        vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
 
-        orderItem.Id = DatabaseManager.FieldLong(rs, "order_id")
-        orderItem.UUID = DatabaseManager.FieldText(rs, "order_uuid")
+        orderItem.Id = managerDatabase.FieldLong(rs, "order_id")
+        orderItem.UUID = managerDatabase.FieldText(rs, "order_uuid")
 
-        poIdValue = DatabaseManager.FieldText(rs, "order_poid")
+        poIdValue = managerDatabase.FieldText(rs, "order_poid")
         If Len(poIdValue) > 0 Then
             orderItem.poID = poIdValue
         End If
 
         Set orderItem.Plant = plantItem
-        orderItem.orderDate = DatabaseManager.FieldDate(rs, "order_date")
+        orderItem.orderDate = managerDatabase.FieldDate(rs, "order_date")
         Set orderItem.Catalogue = catalogueItem
-        orderItem.Amount = DatabaseManager.FieldDouble(rs, "order_amount")
-        orderItem.Status = DatabaseManager.FieldText(rs, "order_status")
+        orderItem.Amount = managerDatabase.FieldDouble(rs, "order_amount")
+        orderItem.Status = managerDatabase.FieldText(rs, "order_status")
         Set orderItem.Vendor = vendorItem
-        orderItem.remarks = DatabaseManager.FieldText(rs, "order_remarks")
-        orderItem.personInCharge = DatabaseManager.FieldText(rs, "order_person_in_charge")
+        orderItem.remarks = managerDatabase.FieldText(rs, "order_remarks")
+        orderItem.personInCharge = managerDatabase.FieldText(rs, "order_person_in_charge")
 
         Set receiveItem.Order = orderItem
-        receiveItem.RemainingOrder = DatabaseManager.FieldDouble(rs, "remaining_order_amount")
+        receiveItem.RemainingOrder = managerDatabase.FieldDouble(rs, "remaining_order_amount")
 
         receives.Add _
             item:=receiveItem, _
@@ -242,7 +242,7 @@ Public Function SelectPendingOrderReceive( _
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
     Set SelectPendingOrderReceive = receives
 

@@ -24,20 +24,20 @@ Public Function SelectUUID( _
     Dim cmd As ADODB.Command
     Dim rs As ADODB.recordset
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_uuid")
+    Set cmd = managerDatabase.CreateCommand(conn, "select_uuid")
 
-    DatabaseManager.AddTextParameter cmd, "p_transaction_type", transactionCode
-    DatabaseManager.AddDateParameter cmd, "p_transaction_date", transactionDate
+    managerDatabase.AddTextParameter cmd, "p_transaction_type", transactionCode
+    managerDatabase.AddDateParameter cmd, "p_transaction_date", transactionDate
 
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     If rs.EOF Then
         SelectUUID = vbNullString
     Else
-        SelectUUID = DatabaseManager.FieldText(rs, "generated_uuid")
+        SelectUUID = managerDatabase.FieldText(rs, "generated_uuid")
     End If
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
 End Function
 
@@ -54,14 +54,14 @@ Public Function CreateTransaction( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_transaction")
+    Set cmd = managerDatabase.CreateCommand(conn, "create_transaction")
 
-    DatabaseManager.AddTextParameter cmd, "p_uuid", transactionUUID
-    DatabaseManager.AddTextParameter cmd, "p_transaction_type", transactionType
-    DatabaseManager.AddTextParameter cmd, "p_created_by", createdBy
-    DatabaseManager.AddDateParameter cmd, "p_active_at", activeAt
+    managerDatabase.AddTextParameter cmd, "p_uuid", transactionUUID
+    managerDatabase.AddTextParameter cmd, "p_transaction_type", transactionType
+    managerDatabase.AddTextParameter cmd, "p_created_by", createdBy
+    managerDatabase.AddDateParameter cmd, "p_active_at", activeAt
 
-    CreateTransaction = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateTransaction = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -74,11 +74,11 @@ Public Function ReverseTransaction( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_transaction_reversal")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_transaction_reversal")
 
-    DatabaseManager.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
+    managerDatabase.AddTextParameter cmd, "p_original_transaction_uuid", originalTransactionUUID
 
-    ReverseTransaction = DatabaseManager.ExecuteNonQuery(cmd)
+    ReverseTransaction = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -91,10 +91,10 @@ Public Function ActivateTransaction( _
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_transaction_activation")
+    Set cmd = managerDatabase.CreateCommand(conn, "update_transaction_activation")
 
-    DatabaseManager.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
+    managerDatabase.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
 
-    ActivateTransaction = DatabaseManager.ExecuteNonQuery(cmd)
+    ActivateTransaction = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
