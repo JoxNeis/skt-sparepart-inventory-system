@@ -2,7 +2,9 @@
 -- Table  : requests
 -- Purpose: Detail of a REQUEST transaction - spareparts issued from the
 --          plant store to a mobile maintenance. Leaves stock on request_date.
--- Notes  : [transaction_id] is one-to-one with transactions. Access
+-- Notes  : [quantity] 0 = the request was deleted (through an approved
+--          update); a new request should have a quantity above 0.
+--          [transaction_id] is one-to-one with transactions. Access
 --          DDL can only make one-to-many relations, so
 --          fk_requests_transaction is added through DAO after this
 --          file runs (see $OneToOneRelations in
@@ -35,7 +37,7 @@ CREATE TABLE [requests] (
 				REFERENCES [spareparts] ([id]),
 	CONSTRAINT
 		[ck_requests_quantity]
-			CHECK ([quantity] > 0)
+			CHECK ([quantity] >= 0)
 );
 
 CREATE INDEX

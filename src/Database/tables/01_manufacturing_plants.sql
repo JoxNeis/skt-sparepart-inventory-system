@@ -4,6 +4,9 @@
 --          mobile maintenance and transaction belongs to exactly one plant.
 -- Notes  : [type] and [region] are free text, e.g. type "PLANT" /
 --          "WAREHOUSE", region "JAWA TIMUR".
+--          [code] is the first part of every document number
+--          (transactions.uuid), so manufacturing_plant_update refuses
+--          to change it once the plant has a transaction.
 -- =====================================================================
 CREATE TABLE [manufacturing_plants] (
 	[id]          AUTOINCREMENT,

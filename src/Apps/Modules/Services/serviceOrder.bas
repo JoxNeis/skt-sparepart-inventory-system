@@ -302,7 +302,7 @@ Public Sub UpdateOrderPOID( _
     ' =====================================================
     serviceActivityLog.WriteActivityLog _
         conn, _
-        "Order.UpdatePoId", _
+        "Order.SetPoNumber", _
         BuildUpdateOrderPoIdDetail(orderUUID, poID)
 
     ' =====================================================

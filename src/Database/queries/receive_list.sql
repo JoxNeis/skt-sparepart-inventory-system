@@ -62,5 +62,6 @@ WHERE
 ORDER BY
 	o.order_date,
 	o.id,
+	r.arrival_date,
 	r.activated_at,
 	r.id;

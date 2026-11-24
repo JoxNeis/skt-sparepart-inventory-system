@@ -16,7 +16,7 @@ deleted: archiving sets `deleted_at`, and archived rows are hidden from pick lis
 
 | Master data | Table | Key / uniqueness | Notes |
 | --- | --- | --- | --- |
-| Manufacturing plant | `manufacturing_plants` | `code` and `name` unique | Every user, stock row, mobile maintenance and transaction belongs to exactly one plant. `type` (e.g. PLANT / WAREHOUSE) and `region` are free text. |
+| Manufacturing plant | `manufacturing_plants` | `code` and `name` unique | Every user, stock row, mobile maintenance and transaction belongs to exactly one plant. `type` (e.g. PLANT / WAREHOUSE) and `region` are free text. `code` starts every document number, so it cannot be changed once the plant has a transaction. |
 | User | `users` | `username` unique (Windows login) | Belongs to one plant. `username` is the value stored in every `*_by` column. `tier` (≥ 0) drives approvals. |
 | Vendor | `vendors` | `code` unique | Suppliers that orders are placed with. Has `name`, `company_name`, `email`. |
 | Sparepart (catalogue) | `spareparts` | `code` unique | The central catalogue: `name`, `alias`, `category`, `applicable`, `unit_of_measurement`, `status`. `display` = "code - name" (calculated). |
@@ -27,6 +27,7 @@ deleted: archiving sets `deleted_at`, and archived rows are hidden from pick lis
 ```mermaid
 erDiagram
     manufacturing_plants ||--o{ users : has
+    users ||--o{ transactions : "created / reversed by"
     manufacturing_plants ||--o{ mobile_maintenances : has
     manufacturing_plants ||--o{ manufacturing_plant_stocks : holds
     spareparts ||--o{ manufacturing_plant_stocks : "stocked as"
@@ -42,6 +43,9 @@ erDiagram
     mobile_maintenances ||--o{ requests : "issued to"
     spareparts ||--o{ requests : issued
     maintenance_works ||--o{ maintenance_work_details : lines
+    spareparts ||--o{ maintenance_work_details : used
+    transactions ||--o{ transaction_update_requests : "original / proposed"
+    users ||--o{ transaction_update_requests : "requested / reviewed by"
 ```
 
 ---
@@ -56,7 +60,7 @@ The header holds everything that is audited:
 
 | Column | Meaning |
 | --- | --- |
-| `uuid` | Document number `<PLANT>-<PREFIX>-<yyyymmdd>-<nnn>`, e.g. `SBY01-ORD-20261124-001`. `<PLANT>` is the plant's `code`; the sequence restarts each day per plant and prefix |
+| `uuid` | Document number `<PLANT>-<PREFIX>-<yyyymmdd>-<nnn>`, e.g. `SBY01-ORD-20261124-001`. `<PLANT>` is the plant's `code`; the sequence restarts each day per plant and prefix, up to 999 documents |
 | `transaction_type` | `ORDER` (`ORD`), `RECEIVE` (`RCV`), `REQUEST` (`WRQ`), `MAINTENANCE` (`MTW`) |
 | `manufacturing_plant_id` | The plant the document belongs to |
 | `created_by`, `created_at` | Who created it, and when |
@@ -74,7 +78,10 @@ Lifecycle:
 | Reversed | `reversed_at` set | No |
 
 **A transaction is never edited or deleted.** A correction is a new draft
-transaction that goes through an [update](#update).
+transaction that goes through an [update](#update). To delete a document, the
+update sets its quantity to **0** (order and request `quantity`, receive
+`received_quantity`). A deleted line does not show on the stock card. New
+documents should have a quantity above 0.
 
 ### Incoming
 
@@ -89,7 +96,7 @@ Each order row (`orders`) stores:
 2. Vendor
 3. PO number (SAP PO, often known later than the order itself)
 4. Order date
-5. Quantity (> 0); the unit of measurement comes from the sparepart
+5. Quantity (≥ 0, 0 = deleted); the unit of measurement comes from the sparepart
 6. Remarks
 7. System remarks (filled by the system for special cases, otherwise empty)
 8. Person in charge
@@ -128,6 +135,9 @@ Each receive row (`receives`) stores:
 Rules:
 
 - Received quantity = OK quantity + NOT OK quantity.
+- The order must be active (not a draft and not reversed).
+- `remaining_quantity_before` on the receive recap counts the earlier receives of
+  the same order by arrival date, so a corrected receive keeps its place.
 - **Only the OK quantity enters stock**, dated on the verification date. A receive
   without a verification date does not move stock yet.
 
@@ -143,13 +153,15 @@ Each request row (`requests`) stores:
 1. Mobile maintenance (destination, from the same plant)
 2. Sparepart
 3. Request date
-4. Quantity (> 0); the unit of measurement comes from the sparepart
+4. Quantity (≥ 0, 0 = deleted); the unit of measurement comes from the sparepart
 5. Remarks
 6. System remarks
 7. Person in charge
 
 Rule: a request is refused when the plant does not have enough stock of the
-sparepart (stock after the request would be negative).
+sparepart: the stock card may not go negative on the request date **or any later
+day** (`stock_ledger_get_available`). This matters for a backdated request, which
+today's `current_stock` alone does not cover.
 
 ### Maintenance work (`MTW`)
 
@@ -169,7 +181,7 @@ stays in the database as reversed, so the history is never lost.
 
 The one exception is the **PO number of an order**: it can be filled in or
 corrected directly from the order recap, without approval, and is logged as
-`Order.UpdatePoId`.
+`Order.SetPoNumber`.
 
 #### Update flow
 
@@ -190,6 +202,9 @@ Rules:
 
 - The original must be **active**. A draft or reversed document cannot be updated.
 - The proposed document is the same type and the same plant as the original.
+- A proposed request is checked with `stock_ledger_get_available`. The original's
+  quantity is added back only when the original is dated on or before the
+  proposed date.
 - The reviewer cannot be the requester; the reviewer's `tier` must be higher.
 - Every step is written to the activity log (`*.CreateUpdateProposal`,
   `*.UpdateRequest.Approve`, `*.UpdateRequest.Reject`), with the log JSON of the
@@ -267,7 +282,7 @@ Every create, update request, approval and master data change writes one row to
 `activity_logs` in the same database transaction as the change itself:
 
 - `activity_code`, e.g. `Order.Create`, `Order.CreateUpdateProposal`,
-  `Order.UpdatePoId`, `Receive.Create`, `Request.Create`,
+  `Order.SetPoNumber`, `Receive.Create`, `Request.Create`,
   `Order.UpdateRequest.Approve`, `Vendor.Create`, `PlantStock.UpdateROP`
 - `detail`: human-readable text
 - `json`: the document's data as JSON, following the database structure (below)

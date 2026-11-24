@@ -2,7 +2,9 @@
 -- Query   : manufacturing_plant_update
 -- Type    : UPDATE
 -- Purpose : Overwrite every editable column of one plant.
---           0 rows affected = not found or archived.
+--           0 rows affected = not found, archived, or p_code differs
+--           from the current code while the plant already has a
+--           transaction (the code is part of every document number).
 -- =====================================================================
 PARAMETERS
 	[p_manufacturing_plant_id] Long,
@@ -23,4 +25,16 @@ SET
 	updated_at = Now()
 WHERE
 	id = [p_manufacturing_plant_id]
-	AND deleted_at IS NULL;
+	AND deleted_at IS NULL
+	AND (
+		code = [p_code]
+		OR NOT EXISTS
+			(
+				SELECT
+					1
+				FROM
+					transactions AS t
+				WHERE
+					t.manufacturing_plant_id = [p_manufacturing_plant_id]
+			)
+	);

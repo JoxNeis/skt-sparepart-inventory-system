@@ -92,6 +92,9 @@ End Sub
 '          mobile maintenance and transaction belongs to exactly one plant.
 ' Notes  : [type] and [region] are free text, e.g. type "PLANT" /
 '          "WAREHOUSE", region "JAWA TIMUR".
+'          [code] is the first part of every document number
+'          (transactions.uuid), so manufacturing_plant_update refuses
+'          to change it once the plant has a transaction.
 '----------------------------------------------------------------------
 Public Sub Table_01_manufacturing_plants()
     Dim sql As String
@@ -434,7 +437,7 @@ Public Sub Table_07_manufacturing_plant_stocks()
     sql = sql & "            FOREIGN KEY ([sparepart_id])" & vbCrLf
     sql = sql & "                REFERENCES [spareparts] ([id])," & vbCrLf
     sql = sql & "    CONSTRAINT" & vbCrLf
-    sql = sql & "        [ck_manufacturing_plant_stocks_current_stocks]" & vbCrLf
+    sql = sql & "        [ck_manufacturing_plant_stocks_current_stock]" & vbCrLf
     sql = sql & "            CHECK (" & vbCrLf
     sql = sql & "                [current_stock] >= 0" & vbCrLf
     sql = sql & "            )," & vbCrLf
@@ -574,6 +577,8 @@ End Sub
 '          vendor. The plant comes from the transaction header.
 ' Notes  : [po_number] was po_id. Renamed because *_id is reserved for
 '          foreign keys, and this is a free-text SAP PO number.
+'          [quantity] 0 = the order was deleted (through an approved
+'          update); a new order should have a quantity above 0.
 '          [transaction_id] is one-to-one with transactions. Access
 '          DDL can only make one-to-many relations, so
 '          fk_orders_transaction is added through DAO after this
@@ -612,7 +617,7 @@ Public Sub Table_09_orders()
     sql = sql & "                REFERENCES [vendors] ([id])," & vbCrLf
     sql = sql & "    CONSTRAINT" & vbCrLf
     sql = sql & "        [ck_orders_quantity]" & vbCrLf
-    sql = sql & "            CHECK ([quantity] > 0)" & vbCrLf
+    sql = sql & "            CHECK ([quantity] >= 0)" & vbCrLf
     sql = sql & ")" & vbCrLf
     EnsureTable "orders", sql
 
@@ -651,6 +656,8 @@ End Sub
 '          Only ok_quantity enters stock, on verification_date.
 ' Notes  : ck_receives_quantity is the same rule serviceReceive
 '          already checks (total = OK + NOT OK).
+'          received_quantity 0 = the receive was deleted (through an
+'          approved update), the same as quantity 0 on orders/requests.
 '          [transaction_id] is one-to-one with transactions. Access
 '          DDL can only make one-to-many relations, so
 '          fk_receives_transaction is added through DAO after this
@@ -727,7 +734,9 @@ End Sub
 ' Table  : requests
 ' Purpose: Detail of a REQUEST transaction - spareparts issued from the
 '          plant store to a mobile maintenance. Leaves stock on request_date.
-' Notes  : [transaction_id] is one-to-one with transactions. Access
+' Notes  : [quantity] 0 = the request was deleted (through an approved
+'          update); a new request should have a quantity above 0.
+'          [transaction_id] is one-to-one with transactions. Access
 '          DDL can only make one-to-many relations, so
 '          fk_requests_transaction is added through DAO after this
 '          file runs (see $OneToOneRelations in
@@ -764,7 +773,7 @@ Public Sub Table_11_requests()
     sql = sql & "                REFERENCES [spareparts] ([id])," & vbCrLf
     sql = sql & "    CONSTRAINT" & vbCrLf
     sql = sql & "        [ck_requests_quantity]" & vbCrLf
-    sql = sql & "            CHECK ([quantity] > 0)" & vbCrLf
+    sql = sql & "            CHECK ([quantity] >= 0)" & vbCrLf
     sql = sql & ")" & vbCrLf
     EnsureTable "requests", sql
 

@@ -112,7 +112,7 @@ End Function
 ' allowedValues (an Array).
 '
 '   If Not managerValidationText.IsInList(value, _
-'       Array("DATANG", "DATANG SEBAGIAN", "BELUM DATANG")) Then
+'       Array("DATANG SEMUA", "DATANG SEBAGIAN", "BELUM DATANG")) Then
 ' =========================================================
 Public Function IsInList( _
     ByVal value As Variant, _

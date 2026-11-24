@@ -5,6 +5,8 @@
 --             IN  = verified OK quantity of an active receive,
 --                   dated verification_date
 --             OUT = quantity of an active request, dated request_date
+--           Deleted lines (received_quantity / quantity 0) are left
+--           out, so they do not show on the stock card.
 --           Source of stock_ledger_get_balance and stock_ledger_list_by_month.
 -- Replaces: select_stock_movement
 -- =====================================================================
@@ -27,6 +29,7 @@ FROM
 			ON v.id = o.vendor_id
 WHERE
 	r.verification_date IS NOT NULL
+	AND r.received_quantity > 0
 
 UNION ALL
 
@@ -46,4 +49,6 @@ FROM
 		INNER JOIN vw_transaction_active AS t
 			ON t.id = rq.transaction_id)
 		INNER JOIN mobile_maintenances AS mm
-			ON mm.id = rq.mobile_maintenance_id;
+			ON mm.id = rq.mobile_maintenance_id
+WHERE
+	rq.quantity > 0;

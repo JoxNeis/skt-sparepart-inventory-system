@@ -4,7 +4,7 @@
 -- Purpose : Add a signed quantity to the cached stock
 --           (+ receive, - request, or the difference of a reversal).
 --           0 rows affected = no stock row, or the result would be
---           negative (ck_manufacturing_plant_stocks_current_stocks).
+--           negative (ck_manufacturing_plant_stocks_current_stock).
 -- Replaces: update_current_stock
 -- =====================================================================
 PARAMETERS

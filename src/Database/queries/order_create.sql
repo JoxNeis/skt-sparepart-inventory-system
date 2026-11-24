@@ -3,7 +3,8 @@
 -- Type    : APPEND
 -- Purpose : Add the order detail to an ORDER transaction header.
 --           Inserts nothing (0 rows) when the header is missing, is not
---           an ORDER, or the sparepart is archived.
+--           an ORDER, the sparepart is archived, or the vendor is
+--           unknown or archived. p_vendor_id may be Null (no vendor).
 -- Replaces: create_order
 -- =====================================================================
 PARAMETERS
@@ -47,4 +48,17 @@ INSERT INTO
 		t.uuid = [p_uuid]
 		AND t.transaction_type = 'ORDER'
 		AND s.id = [p_sparepart_id]
-		AND s.deleted_at IS NULL;
+		AND s.deleted_at IS NULL
+		AND (
+			[p_vendor_id] IS NULL
+			OR EXISTS
+				(
+					SELECT
+						1
+					FROM
+						vendors AS v
+					WHERE
+						v.id = [p_vendor_id]
+						AND v.deleted_at IS NULL
+				)
+		);

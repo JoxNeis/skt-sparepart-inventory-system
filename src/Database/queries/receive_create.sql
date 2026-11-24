@@ -4,7 +4,8 @@
 -- Purpose : Add the receive detail to a RECEIVE transaction header,
 --           against the order with document number p_order_uuid.
 --           Inserts nothing (0 rows) when either header is missing,
---           the types are wrong, or the two belong to different plants.
+--           the types are wrong, the two belong to different plants,
+--           or the order is not active (draft or reversed).
 -- Replaces: create_receive
 -- =====================================================================
 PARAMETERS
@@ -53,4 +54,6 @@ INSERT INTO
 		rt.uuid = [p_uuid]
 		AND rt.transaction_type = 'RECEIVE'
 		AND ot.uuid = [p_order_uuid]
-		AND ot.manufacturing_plant_id = rt.manufacturing_plant_id;
+		AND ot.manufacturing_plant_id = rt.manufacturing_plant_id
+		AND ot.activated_at IS NOT NULL
+		AND ot.reversed_at IS NULL;

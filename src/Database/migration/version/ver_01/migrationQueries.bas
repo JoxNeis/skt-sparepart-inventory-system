@@ -59,6 +59,7 @@ Public Sub ApplyQueries()
     Query_sparepart_find_by_name
     Query_sparepart_list
     Query_sparepart_update
+    Query_stock_ledger_get_available
     Query_stock_ledger_get_balance
     Query_stock_ledger_list_by_month
     Query_transaction_activate
@@ -179,7 +180,7 @@ End Sub
 '           remaining quantity and the delivery status.
 '             BELUM DATANG    nothing received yet
 '             DATANG SEBAGIAN received, OK quantity < ordered
-'             DATANG          OK quantity >= ordered
+'             DATANG SEMUA    OK quantity >= ordered
 '----------------------------------------------------------------------
 ' Uses    : vw_order_receive_total, vw_transaction_active
 Public Sub Query_vw_order_progress()
@@ -231,7 +232,9 @@ End Sub
 ' Query   : vw_receive_running_total
 ' Type    : SELECT (view - no parameters, used by other queries)
 ' Purpose : For each active receive, the OK quantity already received
-'           on the same order BEFORE it (by activation time, then id).
+'           on the same order BEFORE it: by arrival_date, then
+'           activation time, then id. Arrival date comes first so a
+'           corrected receive (re-activated later) keeps its place.
 '           0 for the first receive of an order.
 ' Notes   : Written as a self-join, not a correlated subquery: Access
 '           cannot correlate a subquery on a saved query with itself.
@@ -245,10 +248,16 @@ Public Sub Query_vw_receive_running_total()
     sql = sql & "    r.id AS id," & vbCrLf
     sql = sql & "    Sum(" & vbCrLf
     sql = sql & "        IIf(" & vbCrLf
-    sql = sql & "            e.activated_at < r.activated_at" & vbCrLf
+    sql = sql & "            e.arrival_date < r.arrival_date" & vbCrLf
     sql = sql & "            OR (" & vbCrLf
-    sql = sql & "                e.activated_at = r.activated_at" & vbCrLf
-    sql = sql & "                AND e.id < r.id" & vbCrLf
+    sql = sql & "                e.arrival_date = r.arrival_date" & vbCrLf
+    sql = sql & "                AND (" & vbCrLf
+    sql = sql & "                    e.activated_at < r.activated_at" & vbCrLf
+    sql = sql & "                    OR (" & vbCrLf
+    sql = sql & "                        e.activated_at = r.activated_at" & vbCrLf
+    sql = sql & "                        AND e.id < r.id" & vbCrLf
+    sql = sql & "                    )" & vbCrLf
+    sql = sql & "                )" & vbCrLf
     sql = sql & "            )," & vbCrLf
     sql = sql & "            e.ok_quantity," & vbCrLf
     sql = sql & "            0" & vbCrLf
@@ -272,6 +281,8 @@ End Sub
 '             IN  = verified OK quantity of an active receive,
 '                   dated verification_date
 '             OUT = quantity of an active request, dated request_date
+'           Deleted lines (received_quantity / quantity 0) are left
+'           out, so they do not show on the stock card.
 '           Source of stock_ledger_get_balance and stock_ledger_list_by_month.
 ' Replaces: select_stock_movement
 '----------------------------------------------------------------------
@@ -299,6 +310,7 @@ Public Sub Query_vw_stock_ledger()
     sql = sql & "            ON v.id = o.vendor_id" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
     sql = sql & "    r.verification_date IS NOT NULL" & vbCrLf
+    sql = sql & "    AND r.received_quantity > 0" & vbCrLf
     sql = sql & vbCrLf
     sql = sql & "UNION ALL" & vbCrLf
     sql = sql & vbCrLf
@@ -318,7 +330,9 @@ Public Sub Query_vw_stock_ledger()
     sql = sql & "        INNER JOIN vw_transaction_active AS t" & vbCrLf
     sql = sql & "            ON t.id = rq.transaction_id)" & vbCrLf
     sql = sql & "        INNER JOIN mobile_maintenances AS mm" & vbCrLf
-    sql = sql & "            ON mm.id = rq.mobile_maintenance_id;" & vbCrLf
+    sql = sql & "            ON mm.id = rq.mobile_maintenance_id" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    rq.quantity > 0;" & vbCrLf
 
     SaveQuery "vw_stock_ledger", sql
 End Sub
@@ -466,7 +480,7 @@ End Sub
 ' Purpose : Add a signed quantity to the cached stock
 '           (+ receive, - request, or the difference of a reversal).
 '           0 rows affected = no stock row, or the result would be
-'           negative (ck_manufacturing_plant_stocks_current_stocks).
+'           negative (ck_manufacturing_plant_stocks_current_stock).
 ' Replaces: update_current_stock
 '----------------------------------------------------------------------
 Public Sub Query_manufacturing_plant_stock_adjust_current_stock()
@@ -715,7 +729,9 @@ End Sub
 ' Query   : manufacturing_plant_update
 ' Type    : UPDATE
 ' Purpose : Overwrite every editable column of one plant.
-'           0 rows affected = not found or archived.
+'           0 rows affected = not found, archived, or p_code differs
+'           from the current code while the plant already has a
+'           transaction (the code is part of every document number).
 '----------------------------------------------------------------------
 Public Sub Query_manufacturing_plant_update()
     Dim sql As String
@@ -740,7 +756,19 @@ Public Sub Query_manufacturing_plant_update()
     sql = sql & "    updated_at = Now()" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
     sql = sql & "    id = [p_manufacturing_plant_id]" & vbCrLf
-    sql = sql & "    AND deleted_at IS NULL;" & vbCrLf
+    sql = sql & "    AND deleted_at IS NULL" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        code = [p_code]" & vbCrLf
+    sql = sql & "        OR NOT EXISTS" & vbCrLf
+    sql = sql & "            (" & vbCrLf
+    sql = sql & "                SELECT" & vbCrLf
+    sql = sql & "                    1" & vbCrLf
+    sql = sql & "                FROM" & vbCrLf
+    sql = sql & "                    transactions AS t" & vbCrLf
+    sql = sql & "                WHERE" & vbCrLf
+    sql = sql & "                    t.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "            )" & vbCrLf
+    sql = sql & "    );" & vbCrLf
 
     SaveQuery "manufacturing_plant_update", sql
 End Sub
@@ -809,7 +837,9 @@ End Sub
 ' mobile_maintenance_list.sql
 ' Query   : mobile_maintenance_list
 ' Type    : SELECT
-' Purpose : The plant's mobile maintenances that are not archived.
+' Purpose : The plant's mobile maintenances that are not archived, with
+'           a "code - name" label for drop-downs (same as
+'           sparepart_list.display_name).
 ' Replaces: select_mobile_post_by_manufacturing_plant_name
 '----------------------------------------------------------------------
 Public Sub Query_mobile_maintenance_list()
@@ -823,7 +853,7 @@ Public Sub Query_mobile_maintenance_list()
     sql = sql & "    mm.id AS id," & vbCrLf
     sql = sql & "    mm.code AS code," & vbCrLf
     sql = sql & "    mm.[name] AS [name]," & vbCrLf
-    sql = sql & "    mm.code & ' - ' & mm.[name] AS display" & vbCrLf
+    sql = sql & "    mm.code & ' - ' & mm.[name] AS display_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
     sql = sql & "    mobile_maintenances AS mm" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
@@ -871,7 +901,8 @@ End Sub
 ' Type    : APPEND
 ' Purpose : Add the order detail to an ORDER transaction header.
 '           Inserts nothing (0 rows) when the header is missing, is not
-'           an ORDER, or the sparepart is archived.
+'           an ORDER, the sparepart is archived, or the vendor is
+'           unknown or archived. p_vendor_id may be Null (no vendor).
 ' Replaces: create_order
 '----------------------------------------------------------------------
 Public Sub Query_order_create()
@@ -919,7 +950,20 @@ Public Sub Query_order_create()
     sql = sql & "        t.uuid = [p_uuid]" & vbCrLf
     sql = sql & "        AND t.transaction_type = 'ORDER'" & vbCrLf
     sql = sql & "        AND s.id = [p_sparepart_id]" & vbCrLf
-    sql = sql & "        AND s.deleted_at IS NULL;" & vbCrLf
+    sql = sql & "        AND s.deleted_at IS NULL" & vbCrLf
+    sql = sql & "        AND (" & vbCrLf
+    sql = sql & "            [p_vendor_id] IS NULL" & vbCrLf
+    sql = sql & "            OR EXISTS" & vbCrLf
+    sql = sql & "                (" & vbCrLf
+    sql = sql & "                    SELECT" & vbCrLf
+    sql = sql & "                        1" & vbCrLf
+    sql = sql & "                    FROM" & vbCrLf
+    sql = sql & "                        vendors AS v" & vbCrLf
+    sql = sql & "                    WHERE" & vbCrLf
+    sql = sql & "                        v.id = [p_vendor_id]" & vbCrLf
+    sql = sql & "                        AND v.deleted_at IS NULL" & vbCrLf
+    sql = sql & "                )" & vbCrLf
+    sql = sql & "        );" & vbCrLf
 
     SaveQuery "order_create", sql
 End Sub
@@ -1076,7 +1120,8 @@ End Sub
 ' Purpose : Add the receive detail to a RECEIVE transaction header,
 '           against the order with document number p_order_uuid.
 '           Inserts nothing (0 rows) when either header is missing,
-'           the types are wrong, or the two belong to different plants.
+'           the types are wrong, the two belong to different plants,
+'           or the order is not active (draft or reversed).
 ' Replaces: create_receive
 '----------------------------------------------------------------------
 Public Sub Query_receive_create()
@@ -1129,7 +1174,9 @@ Public Sub Query_receive_create()
     sql = sql & "        rt.uuid = [p_uuid]" & vbCrLf
     sql = sql & "        AND rt.transaction_type = 'RECEIVE'" & vbCrLf
     sql = sql & "        AND ot.uuid = [p_order_uuid]" & vbCrLf
-    sql = sql & "        AND ot.manufacturing_plant_id = rt.manufacturing_plant_id;" & vbCrLf
+    sql = sql & "        AND ot.manufacturing_plant_id = rt.manufacturing_plant_id" & vbCrLf
+    sql = sql & "        AND ot.activated_at IS NOT NULL" & vbCrLf
+    sql = sql & "        AND ot.reversed_at IS NULL;" & vbCrLf
 
     SaveQuery "receive_create", sql
 End Sub
@@ -1204,6 +1251,7 @@ Public Sub Query_receive_list()
     sql = sql & "ORDER BY" & vbCrLf
     sql = sql & "    o.order_date," & vbCrLf
     sql = sql & "    o.id," & vbCrLf
+    sql = sql & "    r.arrival_date," & vbCrLf
     sql = sql & "    r.activated_at," & vbCrLf
     sql = sql & "    r.id;" & vbCrLf
 
@@ -1547,6 +1595,75 @@ Public Sub Query_sparepart_update()
 End Sub
 
 '----------------------------------------------------------------------
+' stock_ledger_get_available.sql
+' Query   : stock_ledger_get_available
+' Type    : SELECT
+' Purpose : The most that can be issued from one sparepart in one plant
+'           on p_date without the stock card going negative on p_date
+'           or on any later day. That is the lowest end-of-day balance
+'           of p_date and of every later day with a movement.
+'           current_stock only covers today, so a backdated request
+'           must be checked with this query.
+'           Always returns one row; available_quantity is Null when
+'           the plant does not exist.
+'           Replacing a request (update): add the original request's
+'           quantity back only when its request_date is on or before
+'           p_date (otherwise it did not lower these balances).
+'----------------------------------------------------------------------
+' Uses    : vw_stock_ledger
+Public Sub Query_stock_ledger_get_available()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_sparepart_id] Long," & vbCrLf
+    sql = sql & "    [p_date] DateTime;" & vbCrLf
+    sql = sql & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Min(" & vbCrLf
+    sql = sql & "        IIf(b.balance IS NULL, 0, b.balance)" & vbCrLf
+    sql = sql & "    ) AS available_quantity" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    (" & vbCrLf
+    sql = sql & "        SELECT" & vbCrLf
+    sql = sql & "            d.movement_day AS movement_day," & vbCrLf
+    sql = sql & "            (" & vbCrLf
+    sql = sql & "                SELECT" & vbCrLf
+    sql = sql & "                    Sum(l.quantity_in) - Sum(l.quantity_out)" & vbCrLf
+    sql = sql & "                FROM" & vbCrLf
+    sql = sql & "                    vw_stock_ledger AS l" & vbCrLf
+    sql = sql & "                WHERE" & vbCrLf
+    sql = sql & "                    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "                    AND l.sparepart_id = [p_sparepart_id]" & vbCrLf
+    sql = sql & "                    AND l.movement_date < DateAdd('d', 1, d.movement_day)" & vbCrLf
+    sql = sql & "            ) AS balance" & vbCrLf
+    sql = sql & "        FROM" & vbCrLf
+    sql = sql & "            (" & vbCrLf
+    sql = sql & "                SELECT" & vbCrLf
+    sql = sql & "                    DateValue([p_date]) AS movement_day" & vbCrLf
+    sql = sql & "                FROM" & vbCrLf
+    sql = sql & "                    manufacturing_plants AS p" & vbCrLf
+    sql = sql & "                WHERE" & vbCrLf
+    sql = sql & "                    p.id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & vbCrLf
+    sql = sql & "                UNION" & vbCrLf
+    sql = sql & vbCrLf
+    sql = sql & "                SELECT" & vbCrLf
+    sql = sql & "                    DateValue(x.movement_date)" & vbCrLf
+    sql = sql & "                FROM" & vbCrLf
+    sql = sql & "                    vw_stock_ledger AS x" & vbCrLf
+    sql = sql & "                WHERE" & vbCrLf
+    sql = sql & "                    x.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "                    AND x.sparepart_id = [p_sparepart_id]" & vbCrLf
+    sql = sql & "                    AND x.movement_date >= DateValue([p_date])" & vbCrLf
+    sql = sql & "            ) AS d" & vbCrLf
+    sql = sql & "    ) AS b;" & vbCrLf
+
+    SaveQuery "stock_ledger_get_available", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' stock_ledger_get_balance.sql
 ' Query   : stock_ledger_get_balance
 ' Type    : SELECT
@@ -1723,6 +1840,8 @@ End Sub
 '           number is at most 32 chars and fits transactions.uuid).
 '           Prefixes come from serviceTransaction: ORD, RCV, WRQ, MTW.
 '           Numbering restarts at 001 per plant, prefix and day.
+'           next_uuid is Null once 999 is used: the day is full for
+'           that plant and prefix (the caller reports it).
 '           A range on [uuid] (instead of Left/Mid) lets Access use
 '           the unique index. uq_transactions_uuid still rejects a
 '           number taken by another user in the meantime.
@@ -1738,20 +1857,24 @@ Public Sub Query_transaction_get_next_uuid()
     sql = sql & "    [p_transaction_date] DateTime;" & vbCrLf
     sql = sql & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    UCase(Trim([p_manufacturing_plant_code]))" & vbCrLf
-    sql = sql & "        & '-'" & vbCrLf
-    sql = sql & "        & UCase([p_uuid_prefix])" & vbCrLf
-    sql = sql & "        & '-'" & vbCrLf
-    sql = sql & "        & Format([p_transaction_date], 'yyyymmdd')" & vbCrLf
-    sql = sql & "        & '-'" & vbCrLf
-    sql = sql & "        & Format(" & vbCrLf
-    sql = sql & "            IIf(" & vbCrLf
-    sql = sql & "                Max(Val(Right(t.uuid, 3))) IS NULL," & vbCrLf
-    sql = sql & "                1," & vbCrLf
-    sql = sql & "                Max(Val(Right(t.uuid, 3))) + 1" & vbCrLf
-    sql = sql & "            )," & vbCrLf
-    sql = sql & "            '000'" & vbCrLf
-    sql = sql & "        ) AS next_uuid" & vbCrLf
+    sql = sql & "    IIf(" & vbCrLf
+    sql = sql & "        Max(Val(Right(t.uuid, 3))) >= 999," & vbCrLf
+    sql = sql & "        Null," & vbCrLf
+    sql = sql & "        UCase(Trim([p_manufacturing_plant_code]))" & vbCrLf
+    sql = sql & "            & '-'" & vbCrLf
+    sql = sql & "            & UCase([p_uuid_prefix])" & vbCrLf
+    sql = sql & "            & '-'" & vbCrLf
+    sql = sql & "            & Format([p_transaction_date], 'yyyymmdd')" & vbCrLf
+    sql = sql & "            & '-'" & vbCrLf
+    sql = sql & "            & Format(" & vbCrLf
+    sql = sql & "                IIf(" & vbCrLf
+    sql = sql & "                    Max(Val(Right(t.uuid, 3))) IS NULL," & vbCrLf
+    sql = sql & "                    1," & vbCrLf
+    sql = sql & "                    Max(Val(Right(t.uuid, 3))) + 1" & vbCrLf
+    sql = sql & "                )," & vbCrLf
+    sql = sql & "                '000'" & vbCrLf
+    sql = sql & "            )" & vbCrLf
+    sql = sql & "    ) AS next_uuid" & vbCrLf
     sql = sql & "FROM" & vbCrLf
     sql = sql & "    transactions AS t" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
