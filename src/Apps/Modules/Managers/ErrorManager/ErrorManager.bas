@@ -64,15 +64,23 @@ Option Explicit
 '       10300  FormManager
 '       10400  TableManager
 '
-'   11000 - 11999  Entities (class modules)
-'       11100  entitiesCatalogue
-'       11200  entitiesMobilePost
-'       11300  entitiesOrder
-'       11400  entitiesPlant
-'       11500  entitiesReceive
-'       11600  entitiesRequest
-'       11700  entitiesStockMovement
-'       11800  entitiesVendor
+'   11000 - 11999  Entities (class modules, blocks of 50)
+'       11000  entitiesManufacturingPlant
+'       11050  entitiesUser
+'       11100  entitiesActivityLog
+'       11150  entitiesVendor
+'       11200  entitiesSparepart
+'       11250  entitiesMobileMaintenance
+'       11300  entitiesManufacturingPlantStock
+'       11350  entitiesTransaction
+'       11400  entitiesOrder
+'       11450  entitiesReceive
+'       11500  entitiesRequest
+'       11550  entitiesTransactionUpdateRequest
+'       11600  entitiesMaintenanceWork
+'       11650  entitiesMaintenanceWorkDetail
+'       11700  entitiesAssembly
+'       11750  entitiesStockLedgerEntry
 '
 '   12000 - 13999  DAO modules
 '       12100  daoActivityLog
