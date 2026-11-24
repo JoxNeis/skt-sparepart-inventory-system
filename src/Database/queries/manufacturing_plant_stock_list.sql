@@ -9,14 +9,14 @@ PARAMETERS
 	[p_manufacturing_plant_id] Long;
 
 SELECT
-	ps.id,
-	ps.current_stock,
-	ps.reorder_point,
-	ps.safety_stock,
-	ps.lead_time_days,
-	ps.average_daily_usage,
-	ps.daily_demand_std_dev,
-	ps.service_level_z,
+	ps.id AS id,
+	ps.current_stock AS current_stock,
+	ps.reorder_point AS reorder_point,
+	ps.safety_stock AS safety_stock,
+	ps.lead_time_days AS lead_time_days,
+	ps.average_daily_usage AS average_daily_usage,
+	ps.daily_demand_std_dev AS daily_demand_std_dev,
+	ps.service_level_z AS service_level_z,
 	IIf(
 		ps.current_stock <= ps.reorder_point,
 		True,

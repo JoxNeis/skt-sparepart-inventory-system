@@ -9,16 +9,16 @@
 -- Replaces: select_stock_movement
 -- =====================================================================
 SELECT
-	r.manufacturing_plant_id,
-	o.sparepart_id,
+	r.manufacturing_plant_id AS manufacturing_plant_id,
+	o.sparepart_id AS sparepart_id,
 	r.verification_date AS movement_date,
 	'IN' AS direction,
 	r.ok_quantity AS quantity_in,
 	0 AS quantity_out,
 	r.uuid AS reference_uuid,
 	v.[name] AS counterparty_name,
-	r.remarks,
-	r.person_in_charge
+	r.remarks AS remarks,
+	r.person_in_charge AS person_in_charge
 FROM
 	(vw_receive_active AS r
 		INNER JOIN orders AS o
@@ -31,16 +31,16 @@ WHERE
 UNION ALL
 
 SELECT
-	t.manufacturing_plant_id,
-	rq.sparepart_id,
-	rq.request_date,
-	'OUT',
-	0,
-	rq.quantity,
-	t.uuid,
-	mm.[name],
-	rq.remarks,
-	rq.person_in_charge
+	t.manufacturing_plant_id AS manufacturing_plant_id,
+	rq.sparepart_id AS sparepart_id,
+	rq.request_date AS movement_date,
+	'OUT' AS direction,
+	0 AS quantity_in,
+	rq.quantity AS quantity_out,
+	t.uuid AS reference_uuid,
+	mm.[name] AS counterparty_name,
+	rq.remarks AS remarks,
+	rq.person_in_charge AS person_in_charge
 FROM
 	(requests AS rq
 		INNER JOIN vw_transaction_active AS t

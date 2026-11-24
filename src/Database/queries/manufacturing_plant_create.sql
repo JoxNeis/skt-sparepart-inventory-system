@@ -7,7 +7,9 @@
 PARAMETERS
 	[p_code] Text(15),
 	[p_name] Text(255),
-	[p_address] Text(255);
+	[p_address] Text(255),
+	[p_type] Text(50),
+	[p_region] Text(100);
 
 INSERT INTO
 	manufacturing_plants
@@ -15,6 +17,8 @@ INSERT INTO
 			code,
 			[name],
 			address,
+			[type],
+			region,
 			created_at
 		)
 	VALUES
@@ -22,5 +26,7 @@ INSERT INTO
 			[p_code],
 			[p_name],
 			[p_address],
+			[p_type],
+			[p_region],
 			Now()
 		);

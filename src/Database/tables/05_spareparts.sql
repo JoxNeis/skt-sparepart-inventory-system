@@ -2,8 +2,9 @@
 -- Table  : spareparts
 -- Purpose: Master data - the central sparepart catalogue.
 -- Notes  : [display] ("code - name") is a calculated field. Access DDL
---          cannot create one, so build.ps1 adds it through DAO after
---          this file runs (see $CalculatedFields there). It cannot be
+--          cannot create one, so the migration adds it through DAO
+--          after this file runs (see $CalculatedFields in
+--          migration\generate_migration_vba.ps1). It cannot be
 --          indexed and is never written by a query.
 --          [alias] is the one other name a sparepart is known by.
 -- =====================================================================

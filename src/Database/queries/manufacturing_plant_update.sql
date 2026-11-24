@@ -8,7 +8,9 @@ PARAMETERS
 	[p_manufacturing_plant_id] Long,
 	[p_code] Text(15),
 	[p_name] Text(255),
-	[p_address] Text(255);
+	[p_address] Text(255),
+	[p_type] Text(50),
+	[p_region] Text(100);
 
 UPDATE
 	manufacturing_plants
@@ -16,6 +18,8 @@ SET
 	code = [p_code],
 	[name] = [p_name],
 	address = [p_address],
+	[type] = [p_type],
+	region = [p_region],
 	updated_at = Now()
 WHERE
 	id = [p_manufacturing_plant_id]

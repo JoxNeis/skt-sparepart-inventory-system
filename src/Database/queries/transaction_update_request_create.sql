@@ -24,11 +24,11 @@ INSERT INTO
 			requested_at
 		)
 	SELECT
-		old_t.id,
-		new_t.id,
-		[p_reason],
-		[p_requested_by],
-		Now()
+		old_t.id AS original_transaction_id,
+		new_t.id AS proposed_transaction_id,
+		[p_reason] AS reason,
+		[p_requested_by] AS requested_by,
+		Now() AS requested_at
 	FROM
 		transactions AS old_t,
 		transactions AS new_t
@@ -48,6 +48,5 @@ INSERT INTO
 					transaction_update_requests AS ur
 				WHERE
 					ur.original_transaction_id = old_t.id
-					AND ur.approved_at IS NULL
-					AND ur.rejected_at IS NULL
+					AND ur.verdict IS NULL
 			);

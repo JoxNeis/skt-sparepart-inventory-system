@@ -5,11 +5,11 @@
 -- Replaces: select_vendors
 -- =====================================================================
 SELECT
-	v.id,
-	v.code,
-	v.[name],
-	v.company_name,
-	v.email
+	v.id AS id,
+	v.code AS code,
+	v.[name] AS [name],
+	v.company_name AS company_name,
+	v.email AS email
 FROM
 	vendors AS v
 WHERE

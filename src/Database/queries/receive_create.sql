@@ -34,16 +34,16 @@ INSERT INTO
 			person_in_charge
 		)
 	SELECT
-		rt.id,
-		o.id,
-		[p_arrival_date],
-		[p_verification_date],
-		[p_received_quantity],
-		[p_ok_quantity],
-		[p_not_ok_quantity],
-		[p_remarks],
-		[p_system_remarks],
-		[p_person_in_charge]
+		rt.id AS transaction_id,
+		o.id AS order_id,
+		[p_arrival_date] AS arrival_date,
+		[p_verification_date] AS verification_date,
+		[p_received_quantity] AS received_quantity,
+		[p_ok_quantity] AS ok_quantity,
+		[p_not_ok_quantity] AS not_ok_quantity,
+		[p_remarks] AS remarks,
+		[p_system_remarks] AS system_remarks,
+		[p_person_in_charge] AS person_in_charge
 	FROM
 		transactions AS rt,
 		transactions AS ot

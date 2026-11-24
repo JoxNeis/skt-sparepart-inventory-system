@@ -10,11 +10,11 @@ PARAMETERS
 	[p_name] Text(255);
 
 SELECT
-	s.id,
-	s.code,
-	s.[name],
-	s.alias,
-	s.unit_of_measurement,
+	s.id AS id,
+	s.code AS code,
+	s.[name] AS [name],
+	s.alias AS alias,
+	s.unit_of_measurement AS unit_of_measurement,
 	IIf(
 		s.[name] = [p_name]
 		OR s.code = [p_name],

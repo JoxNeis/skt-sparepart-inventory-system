@@ -3,9 +3,11 @@
 -- Purpose: Approval workflow for editing an active transaction. The
 --          edit is stored as a new draft (proposed) transaction.
 --          Approving reverses the original and activates the proposal.
--- Life   : pending  -> approved_at IS NULL AND rejected_at IS NULL
---          approved -> approved_at set
---          rejected -> rejected_at set
+-- Life   : pending  -> verdict IS NULL
+--          approved -> verdict = 'APPROVED'
+--          rejected -> verdict = 'REJECTED'
+--          [reviewer] and [reviewed_at] are set together with
+--          [verdict], and are NULL while the request is pending.
 -- Notes  : original_transaction_id is no longer unique, so a
 --          transaction can be requested again after a rejection.
 --          The old composite FK (original, proposed) -> (id, id) is
@@ -18,10 +20,9 @@ CREATE TABLE [transaction_update_requests] (
 	[reason]                   LONGTEXT,
 	[requested_by]             TEXT(64)  NOT NULL,
 	[requested_at]             DATETIME  NOT NULL DEFAULT Now(),
-	[approved_by]              TEXT(64),
-	[approved_at]              DATETIME,
-	[rejected_by]              TEXT(64),
-	[rejected_at]              DATETIME,
+	[verdict]                  TEXT(10),
+	[reviewer]                 TEXT(64),
+	[reviewed_at]              DATETIME,
 	[decision_note]            LONGTEXT,
 
 	CONSTRAINT
@@ -43,20 +44,24 @@ CREATE TABLE [transaction_update_requests] (
 			FOREIGN KEY ([requested_by])
 				REFERENCES [users] ([username]),
 	CONSTRAINT
-		[fk_transaction_update_requests_approved_by]
-			FOREIGN KEY ([approved_by])
+		[fk_transaction_update_requests_reviewer]
+			FOREIGN KEY ([reviewer])
 				REFERENCES [users] ([username]),
 	CONSTRAINT
-		[fk_transaction_update_requests_rejected_by]
-			FOREIGN KEY ([rejected_by])
-				REFERENCES [users] ([username]),
-	CONSTRAINT
-		[ck_transaction_update_requests_decision]
+		[ck_transaction_update_requests_verdict]
 			CHECK (
 				[original_transaction_id] <> [proposed_transaction_id]
 				AND (
-					[approved_at] IS NULL
-					OR [rejected_at] IS NULL
+					(
+						[verdict] IS NULL
+						AND [reviewer] IS NULL
+						AND [reviewed_at] IS NULL
+					)
+					OR (
+						[verdict] IN ('APPROVED', 'REJECTED')
+						AND [reviewer] IS NOT NULL
+						AND [reviewed_at] IS NOT NULL
+					)
 				)
 			)
 );
@@ -64,3 +69,6 @@ CREATE TABLE [transaction_update_requests] (
 CREATE INDEX
 	[idx_transaction_update_requests_requested_at]
 		ON [transaction_update_requests] ([requested_at]);
+CREATE INDEX
+	[idx_transaction_update_requests_verdict]
+		ON [transaction_update_requests] ([verdict]);

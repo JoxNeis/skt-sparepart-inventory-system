@@ -30,14 +30,14 @@ INSERT INTO
 			person_in_charge
 		)
 	SELECT
-		t.id,
-		mm.id,
-		s.id,
-		[p_request_date],
-		[p_quantity],
-		[p_remarks],
-		[p_system_remarks],
-		[p_person_in_charge]
+		t.id AS transaction_id,
+		mm.id AS mobile_maintenance_id,
+		s.id AS sparepart_id,
+		[p_request_date] AS request_date,
+		[p_quantity] AS quantity,
+		[p_remarks] AS remarks,
+		[p_system_remarks] AS system_remarks,
+		[p_person_in_charge] AS person_in_charge
 	FROM
 		transactions AS t,
 		mobile_maintenances AS mm,

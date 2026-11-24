@@ -5,14 +5,14 @@
 -- Replaces: select_users
 -- =====================================================================
 SELECT
-	u.id,
-	u.username,
-	u.first_name,
-	u.middle_name,
-	u.last_name,
-	u.jobdesk,
-	u.tier,
-	u.manufacturing_plant_id,
+	u.id AS id,
+	u.username AS username,
+	u.first_name AS first_name,
+	u.middle_name AS middle_name,
+	u.last_name AS last_name,
+	u.jobdesk AS jobdesk,
+	u.tier AS tier,
+	u.manufacturing_plant_id AS manufacturing_plant_id,
 	p.[name] AS manufacturing_plant_name
 FROM
 	users AS u

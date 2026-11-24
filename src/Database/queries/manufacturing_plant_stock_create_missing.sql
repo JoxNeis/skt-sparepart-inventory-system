@@ -16,9 +16,9 @@ INSERT INTO
 			created_at
 		)
 	SELECT
-		p.id,
-		s.id,
-		Now()
+		p.id AS manufacturing_plant_id,
+		s.id AS sparepart_id,
+		Now() AS created_at
 	FROM
 		manufacturing_plants AS p,
 		spareparts AS s

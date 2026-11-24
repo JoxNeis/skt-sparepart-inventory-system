@@ -8,9 +8,10 @@ PARAMETERS
 	[p_manufacturing_plant_id] Long;
 
 SELECT
-	mm.id,
-	mm.code,
-	mm.[name]
+	mm.id AS id,
+	mm.code AS code,
+	mm.[name] AS [name],
+	mm.code & ' - ' & mm.[name] AS display
 FROM
 	mobile_maintenances AS mm
 WHERE

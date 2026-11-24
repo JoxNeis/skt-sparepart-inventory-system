@@ -5,13 +5,13 @@
 --           The one place where "active" is defined.
 -- =====================================================================
 SELECT
-	t.id,
-	t.uuid,
-	t.transaction_type,
-	t.manufacturing_plant_id,
-	t.created_by,
-	t.created_at,
-	t.activated_at
+	t.id AS id,
+	t.uuid AS uuid,
+	t.transaction_type AS transaction_type,
+	t.manufacturing_plant_id AS manufacturing_plant_id,
+	t.created_by AS created_by,
+	t.created_at AS created_at,
+	t.activated_at AS activated_at
 FROM
 	transactions AS t
 WHERE

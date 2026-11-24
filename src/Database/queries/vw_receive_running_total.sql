@@ -8,7 +8,7 @@
 --           cannot correlate a subquery on a saved query with itself.
 -- =====================================================================
 SELECT
-	r.id,
+	r.id AS id,
 	Sum(
 		IIf(
 			e.activated_at < r.activated_at

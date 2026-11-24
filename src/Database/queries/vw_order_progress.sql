@@ -8,21 +8,21 @@
 --             DATANG          OK quantity >= ordered
 -- =====================================================================
 SELECT
-	o.id,
-	o.transaction_id,
-	t.uuid,
-	t.manufacturing_plant_id,
-	t.activated_at,
-	o.sparepart_id,
-	o.vendor_id,
-	o.po_number,
-	o.order_date,
-	o.quantity,
-	o.remarks,
-	o.system_remarks,
-	o.person_in_charge,
-	rt.ok_quantity_total,
-	rt.received_quantity_total,
+	o.id AS id,
+	o.transaction_id AS transaction_id,
+	t.uuid AS uuid,
+	t.manufacturing_plant_id AS manufacturing_plant_id,
+	t.activated_at AS activated_at,
+	o.sparepart_id AS sparepart_id,
+	o.vendor_id AS vendor_id,
+	o.po_number AS po_number,
+	o.order_date AS order_date,
+	o.quantity AS quantity,
+	o.remarks AS remarks,
+	o.system_remarks AS system_remarks,
+	o.person_in_charge AS person_in_charge,
+	rt.ok_quantity_total AS ok_quantity_total,
+	rt.received_quantity_total AS received_quantity_total,
 	IIf(
 		o.quantity - rt.ok_quantity_total < 0,
 		0,
@@ -33,7 +33,7 @@ SELECT
 		'BELUM DATANG',
 		IIf(
 			rt.ok_quantity_total >= o.quantity,
-			'DATANG',
+			'DATANG SEMUA',
 			'DATANG SEBAGIAN'
 		)
 	) AS status

@@ -11,14 +11,14 @@ PARAMETERS
 	[p_date_to] DateTime;
 
 SELECT
-	rq.id,
-	t.uuid,
-	rq.request_date,
-	rq.quantity,
-	rq.remarks,
-	rq.system_remarks,
-	rq.person_in_charge,
-	t.activated_at,
+	rq.id AS id,
+	t.uuid AS uuid,
+	rq.request_date AS request_date,
+	rq.quantity AS quantity,
+	rq.remarks AS remarks,
+	rq.system_remarks AS system_remarks,
+	rq.person_in_charge AS person_in_charge,
+	t.activated_at AS activated_at,
 	s.id AS sparepart_id,
 	s.code AS sparepart_code,
 	s.[name] AS sparepart_name,

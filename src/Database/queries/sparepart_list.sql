@@ -6,15 +6,15 @@
 -- Replaces: select_catalogues
 -- =====================================================================
 SELECT
-	s.id,
-	s.code,
-	s.[name],
-	s.alias,
+	s.id AS id,
+	s.code AS code,
+	s.[name] AS [name],
+	s.alias AS alias,
 	s.[display] AS display_name,
-	s.category,
-	s.applicable,
-	s.unit_of_measurement,
-	s.status
+	s.category AS category,
+	s.applicable AS applicable,
+	s.unit_of_measurement AS unit_of_measurement,
+	s.status AS [status]
 FROM
 	spareparts AS s
 WHERE

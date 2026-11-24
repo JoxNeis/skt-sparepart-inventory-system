@@ -31,15 +31,15 @@ INSERT INTO
 			person_in_charge
 		)
 	SELECT
-		t.id,
-		s.id,
-		[p_vendor_id],
-		[p_po_number],
-		[p_order_date],
-		[p_quantity],
-		[p_remarks],
-		[p_system_remarks],
-		[p_person_in_charge]
+		t.id AS transaction_id,
+		s.id AS sparepart_id,
+		[p_vendor_id] AS vendor_id,
+		[p_po_number] AS po_number,
+		[p_order_date] AS order_date,
+		[p_quantity] AS quantity,
+		[p_remarks] AS remarks,
+		[p_system_remarks] AS system_remarks,
+		[p_person_in_charge] AS person_in_charge
 	FROM
 		transactions AS t,
 		spareparts AS s

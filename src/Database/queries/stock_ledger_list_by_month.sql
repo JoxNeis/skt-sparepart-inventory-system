@@ -15,15 +15,15 @@ PARAMETERS
 	[p_month] Short;
 
 SELECT
-	l.movement_date,
+	l.movement_date AS movement_date,
 	IIf(l.direction = 'IN', l.reference_uuid, '') AS incoming_reference,
 	IIf(l.direction = 'IN', l.counterparty_name, '') AS incoming_from,
 	IIf(l.direction = 'IN', l.quantity_in, NULL) AS incoming_quantity,
 	IIf(l.direction = 'OUT', l.reference_uuid, '') AS outgoing_reference,
 	IIf(l.direction = 'OUT', l.counterparty_name, '') AS outgoing_to,
 	IIf(l.direction = 'OUT', l.quantity_out, NULL) AS outgoing_quantity,
-	l.remarks,
-	l.person_in_charge
+	l.remarks AS remarks,
+	l.person_in_charge AS person_in_charge
 FROM
 	vw_stock_ledger AS l
 WHERE
