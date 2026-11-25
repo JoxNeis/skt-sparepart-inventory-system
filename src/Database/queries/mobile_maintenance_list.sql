@@ -1,7 +1,9 @@
 -- =====================================================================
 -- Query   : mobile_maintenance_list
 -- Type    : SELECT
--- Purpose : The plant's mobile maintenances that are not archived.
+-- Purpose : The plant's mobile maintenances that are not archived, with
+--           a "code - name" label for drop-downs (same as
+--           sparepart_list.display_name).
 -- Replaces: select_mobile_post_by_manufacturing_plant_name
 -- =====================================================================
 PARAMETERS
@@ -11,7 +13,7 @@ SELECT
 	mm.id AS id,
 	mm.code AS code,
 	mm.[name] AS [name],
-	mm.code & ' - ' & mm.[name] AS display
+	mm.code & ' - ' & mm.[name] AS display_name
 FROM
 	mobile_maintenances AS mm
 WHERE

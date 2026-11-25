@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - RECEIVE
 ' Table      : receives
-' Error codes: entitiesReceive (ErrorCodesEntities.bas)
+' Error codes: entitiesReceive (managerErrorCodesEntities.bas)
 '
 ' Detail of a RECEIVE transaction - goods arriving against
 ' an order, split into OK and NOT OK after verification.
@@ -63,8 +63,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -86,7 +86,7 @@ End Property
 Public Property Set Transaction(ByVal value As Transaction)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.EmptyTransaction, _
             CLASS_NAME & ".Transaction", _
             CLASS_NAME & ": Transaksi tidak boleh kosong."
@@ -94,7 +94,7 @@ Public Property Set Transaction(ByVal value As Transaction)
 
     If Len(value.TransactionType) > 0 Then
         If value.TransactionType <> TRANSACTION_TYPE Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesReceive.WrongTransactionType, _
                 CLASS_NAME & ".Transaction", _
                 CLASS_NAME & ": Tipe transaksi harus " & _
@@ -117,32 +117,17 @@ End Property
 Public Property Set Order(ByVal value As Order)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.EmptyOrder, _
             CLASS_NAME & ".Order", _
             CLASS_NAME & ": Order tidak boleh kosong."
     End If
 
-    If value.Quantity > 0 Then
-
-        If mReceivedQuantity > value.Quantity Then
-            ErrorManager.ThrowError _
-                entitiesReceive.ReceivedQuantityExceedsOrder, _
-                CLASS_NAME & ".Order", _
-                CLASS_NAME & _
-                ": Total penerimaan tidak boleh melebihi jumlah order."
-        End If
-
-        If mOkQuantity > value.Quantity Then
-            ErrorManager.ThrowError _
-                entitiesReceive.OkQuantityExceedsOrder, _
-                CLASS_NAME & ".Order", _
-                CLASS_NAME & _
-                ": Jumlah barang OK tidak boleh melebihi jumlah order."
-        End If
-
-    End If
-
+    ' No "received > ordered" check here: an approved order
+    ' update may lower the ordered quantity after goods were
+    ' received, and those rows must still load. serviceReceive
+    ' checks the OK quantity against the remaining quantity
+    ' when a receive is created or proposed.
     Set mOrder = value
 
 End Property
@@ -157,15 +142,15 @@ End Property
 
 Public Property Let ArrivalDate(ByVal value As Date)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.EmptyArrivalDate, _
             CLASS_NAME & ".ArrivalDate", _
             CLASS_NAME & ": Tanggal kedatangan tidak boleh kosong."
     End If
 
     If DateValue(value) > VBA.Date Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.FutureArrivalDate, _
             CLASS_NAME & ".ArrivalDate", _
             CLASS_NAME & _
@@ -174,7 +159,7 @@ Public Property Let ArrivalDate(ByVal value As Date)
 
     If mVerificationDate <> 0 Then
         If DateValue(value) > DateValue(mVerificationDate) Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesReceive.ArrivalAfterVerification, _
                 CLASS_NAME & ".ArrivalDate", _
                 CLASS_NAME & _
@@ -197,8 +182,8 @@ End Property
 
 Public Property Let VerificationDate(ByVal value As Date)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.InvalidVerificationDate, _
             CLASS_NAME & ".VerificationDate", _
             CLASS_NAME & ": Tanggal verifikasi tidak valid."
@@ -207,7 +192,7 @@ Public Property Let VerificationDate(ByVal value As Date)
     If value <> 0 Then
 
         If DateValue(value) > VBA.Date Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesReceive.FutureVerificationDate, _
                 CLASS_NAME & ".VerificationDate", _
                 CLASS_NAME & _
@@ -216,7 +201,7 @@ Public Property Let VerificationDate(ByVal value As Date)
 
         If mArrivalDate <> 0 Then
             If DateValue(value) < DateValue(mArrivalDate) Then
-                ErrorManager.ThrowError _
+                managerError.ThrowError _
                     entitiesReceive.VerificationBeforeArrival, _
                     CLASS_NAME & ".VerificationDate", _
                     CLASS_NAME & _
@@ -240,25 +225,15 @@ End Property
 
 Public Property Let ReceivedQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.NegativeReceivedQuantity, _
             CLASS_NAME & ".ReceivedQuantity", _
             CLASS_NAME & ": Total penerimaan tidak boleh negatif."
     End If
 
-    If Not mOrder Is Nothing Then
-        If mOrder.Quantity > 0 And value > mOrder.Quantity Then
-            ErrorManager.ThrowError _
-                entitiesReceive.ReceivedQuantityExceedsOrder, _
-                CLASS_NAME & ".ReceivedQuantity", _
-                CLASS_NAME & _
-                ": Total penerimaan tidak boleh melebihi jumlah order."
-        End If
-    End If
-
     If mOkQuantity + mNotOkQuantity > value Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.OkNotOkExceedsReceived, _
             CLASS_NAME & ".ReceivedQuantity", _
             CLASS_NAME & _
@@ -279,29 +254,19 @@ End Property
 
 Public Property Let OkQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.NegativeOkQuantity, _
             CLASS_NAME & ".OkQuantity", _
             CLASS_NAME & ": Jumlah barang OK tidak boleh negatif."
     End If
 
     If value + mNotOkQuantity > mReceivedQuantity Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.OkNotOkExceedsReceived, _
             CLASS_NAME & ".OkQuantity", _
             CLASS_NAME & _
             ": Total barang OK dan tidak OK melebihi total penerimaan."
-    End If
-
-    If Not mOrder Is Nothing Then
-        If mOrder.Quantity > 0 And value > mOrder.Quantity Then
-            ErrorManager.ThrowError _
-                entitiesReceive.OkQuantityExceedsOrder, _
-                CLASS_NAME & ".OkQuantity", _
-                CLASS_NAME & _
-                ": Jumlah barang OK tidak boleh melebihi jumlah order."
-        End If
     End If
 
     mOkQuantity = value
@@ -318,15 +283,15 @@ End Property
 
 Public Property Let NotOkQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.NegativeNotOkQuantity, _
             CLASS_NAME & ".NotOkQuantity", _
             CLASS_NAME & ": Jumlah barang tidak OK tidak boleh negatif."
     End If
 
     If mOkQuantity + value > mReceivedQuantity Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.OkNotOkExceedsReceived, _
             CLASS_NAME & ".NotOkQuantity", _
             CLASS_NAME & _
@@ -369,15 +334,15 @@ Public Property Let PersonInCharge(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsBlank(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(value) Then
+        managerError.ThrowError _
             entitiesReceive.EmptyPersonInCharge, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge tidak boleh kosong."
     End If
 
-    If ValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesReceive.PersonInChargeTooLong, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge maksimal " & _
@@ -401,8 +366,8 @@ End Property
 
 Public Property Let RemainingQuantityBefore(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesReceive.NegativeRemainingQuantity, _
             CLASS_NAME & ".RemainingQuantityBefore", _
             CLASS_NAME & ": Sisa jumlah order tidak boleh negatif."
@@ -410,7 +375,7 @@ Public Property Let RemainingQuantityBefore(ByVal value As Long)
 
     If Not mOrder Is Nothing Then
         If mOrder.Quantity > 0 And value > mOrder.Quantity Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesReceive.RemainingQuantityExceedsOrder, _
                 CLASS_NAME & ".RemainingQuantityBefore", _
                 CLASS_NAME & _
@@ -481,7 +446,7 @@ End Property
 Public Sub Validate()
 
     If Not IsQuantityBalanced Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesReceive.QuantityNotBalanced, _
             CLASS_NAME & ".Validate", _
             CLASS_NAME & _

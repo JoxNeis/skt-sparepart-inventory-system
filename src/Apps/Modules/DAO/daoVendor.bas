@@ -3,86 +3,116 @@ Option Explicit
 
 ' =========================================================
 ' DAO - VENDOR
+' Table: vendors
 '
 ' One function = one saved Access query.
 ' Validation, transaction, row-count checks and activity
 ' log live in serviceVendor.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_VENDOR"
+Private Const MODULE_NAME As String = "daoVendor"
 
 
-' select_vendors
-' Returns Vendor objects (no collection key, so duplicate
-' names do not cause error 457).
-' Name, Code and CompanyName are only set when the query
-' returns a value, so serviceVendor can report a blank
-' value with the record number itself.
-Public Function SelectVendors( _
+' vendor_list
+' Active vendors, ordered by name.
+Public Function ListVendors( _
     ByVal conn As ADODB.connection) As Collection
 
     Dim cmd As ADODB.Command
     Dim rs As ADODB.recordset
     Dim vendors As Collection
-    Dim vendorItem As Vendor
-    Dim vendorName As String
-    Dim vendorCode As String
-    Dim vendorCompanyName As String
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_vendors")
-
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
-
-    ' Fields required by the Vendor mapping below.
-    DatabaseManager.ValidateFields rs, Array("name", "code", "company_name")
+    Set cmd = managerDatabase.CreateCommand(conn, "vendor_list")
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
     Set vendors = New Collection
 
     Do While Not rs.EOF
-
-        vendorName = DatabaseManager.FieldText(rs, "name")
-        vendorCode = DatabaseManager.FieldText(rs, "code")
-        vendorCompanyName = DatabaseManager.FieldText(rs, "company_name")
-
-        Set vendorItem = New Vendor
-
-        With vendorItem
-            .Id = DatabaseManager.FieldLong(rs, "id")
-            If Len(vendorName) > 0 Then .Name = vendorName
-            If Len(vendorCode) > 0 Then .Code = vendorCode
-            If Len(vendorCompanyName) > 0 Then .CompanyName = vendorCompanyName
-        End With
-
-        vendors.Add item:=vendorItem
-
-        Set vendorItem = Nothing
-
+        vendors.Add MapVendor(rs)
         rs.MoveNext
     Loop
 
-    DatabaseManager.CloseRecordset rs
+    managerDatabase.CloseRecordset rs
 
-    Set SelectVendors = vendors
+    Set ListVendors = vendors
 
 End Function
 
 
-' create_vendor
-' Parameter order: p_vendor_name, p_vendor_company_name,
-' p_vendor_code.
-' Returns the affected row count.
+' vendor_create
 Public Function CreateVendor( _
     ByVal conn As ADODB.connection, _
     ByVal vendorItem As Vendor) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_vendor")
+    Set cmd = managerDatabase.CreateCommand(conn, "vendor_create")
 
-    DatabaseManager.AddTextParameter cmd, "p_vendor_name", vendorItem.Name
-    DatabaseManager.AddTextParameter cmd, "p_vendor_company_name", vendorItem.CompanyName
-    DatabaseManager.AddTextParameter cmd, "p_vendor_code", vendorItem.Code
+    managerDatabase.AddTextParameter cmd, "p_code", vendorItem.Code, 40
+    managerDatabase.AddTextParameter cmd, "p_name", vendorItem.Name, 255
+    managerDatabase.AddNullableTextParameter cmd, "p_company_name", vendorItem.CompanyName, 255
+    managerDatabase.AddNullableTextParameter cmd, "p_email", vendorItem.Email, 255
 
-    CreateVendor = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateVendor = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' vendor_update
+Public Function UpdateVendor( _
+    ByVal conn As ADODB.connection, _
+    ByVal vendorItem As Vendor) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, "vendor_update")
+
+    managerDatabase.AddLongParameter cmd, "p_vendor_id", vendorItem.Id
+    managerDatabase.AddTextParameter cmd, "p_code", vendorItem.Code, 40
+    managerDatabase.AddTextParameter cmd, "p_name", vendorItem.Name, 255
+    managerDatabase.AddNullableTextParameter cmd, "p_company_name", vendorItem.CompanyName, 255
+    managerDatabase.AddNullableTextParameter cmd, "p_email", vendorItem.Email, 255
+
+    UpdateVendor = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' vendor_archive
+Public Function ArchiveVendor( _
+    ByVal conn As ADODB.connection, _
+    ByVal vendorId As Long) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, "vendor_archive")
+
+    managerDatabase.AddLongParameter cmd, "p_vendor_id", vendorId
+
+    ArchiveVendor = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' =========================================================
+' INTERNAL
+' =========================================================
+
+Private Function MapVendor( _
+    ByVal rs As ADODB.recordset) As Vendor
+
+    Dim vendorItem As Vendor
+
+    Set vendorItem = New Vendor
+
+    With vendorItem
+        .Id = managerDatabase.FieldLong(rs, "id")
+        .Code = managerDatabase.FieldText(rs, "code")
+        .Name = managerDatabase.FieldText(rs, "name")
+        .CompanyName = managerDatabase.FieldText(rs, "company_name")
+        .Email = managerDatabase.FieldText(rs, "email")
+    End With
+
+    Set MapVendor = vendorItem
 
 End Function

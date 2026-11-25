@@ -3,6 +3,7 @@ Option Explicit
 
 ' =========================================================
 ' DAO - ORDER
+' Table: orders (progress from vw_order_progress)
 '
 ' One function = one saved Access query.
 ' The connection (and its running transaction) is owned by
@@ -10,137 +11,114 @@ Option Explicit
 ' activity logs are done by serviceOrder.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_ORDER"
+Private Const MODULE_NAME As String = "daoOrder"
 
 
-' create_order
-' Returns the affected row count.
+' order_create
+' The ORDER header (transactionUUID) must exist. 0 rows when
+' the header is not an ORDER, or the sparepart / vendor is
+' archived or unknown.
 Public Function CreateOrder( _
     ByVal conn As ADODB.connection, _
     ByVal transactionUUID As String, _
     ByVal orderItem As Order) As Long
 
     Dim cmd As ADODB.Command
+    Dim vendorId As Variant
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_order")
+    vendorId = Null
+    If orderItem.HasVendor Then vendorId = orderItem.Vendor.Id
 
-    DatabaseManager.AddTextParameter cmd, "p_transaction_uuid", transactionUUID
-    DatabaseManager.AddDateParameter cmd, "p_order_date", orderItem.orderDate
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", orderItem.Catalogue.Name
-    DatabaseManager.AddDoubleParameter cmd, "p_amount", orderItem.Amount
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_name", orderItem.Plant.Name
-    DatabaseManager.AddTextParameter cmd, "p_vendor_name", orderItem.Vendor.Name
-    DatabaseManager.AddTextParameter cmd, "p_remarks", orderItem.remarks
-    DatabaseManager.AddTextParameter cmd, "person_in_charge", orderItem.personInCharge
+    Set cmd = managerDatabase.CreateCommand(conn, "order_create")
 
-    CreateOrder = DatabaseManager.ExecuteNonQuery(cmd)
+    managerDatabase.AddTextParameter cmd, "p_uuid", transactionUUID, 36
+    managerDatabase.AddLongParameter cmd, "p_sparepart_id", orderItem.Sparepart.Id
+    managerDatabase.AddNullableLongParameter cmd, "p_vendor_id", vendorId
+    managerDatabase.AddNullableTextParameter cmd, "p_po_number", orderItem.PoNumber, 50
+    managerDatabase.AddDateParameter cmd, "p_order_date", DateValue(orderItem.OrderDate)
+    managerDatabase.AddLongParameter cmd, "p_quantity", orderItem.Quantity
+    managerDatabase.AddNullableLongTextParameter cmd, "p_remarks", orderItem.Remarks
+    managerDatabase.AddNullableLongTextParameter cmd, "p_system_remarks", orderItem.SystemRemarks
+    managerDatabase.AddNullableTextParameter cmd, "p_person_in_charge", orderItem.PersonInCharge, 255
+
+    CreateOrder = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
 
-' select_order_receive_by_manufacturing_plant_name_and_order_date
-' Returns Order objects keyed by order UUID.
-Public Function SelectOrder( _
+' order_list
+' Active, not deleted orders of one plant with an order date
+' between fromDate and toDate (whole days), keyed by UUID, in
+' order date order. page: filter and page (Nothing = every
+' row).
+Public Function ListOrders( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String, _
+    ByVal plantItem As ManufacturingPlant, _
     ByVal fromDate As Date, _
-    ByVal untilDate As Date) As Collection
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Collection
 
-    Dim cmd As ADODB.Command
-    Dim rs As ADODB.recordset
-    Dim orders As Collection
-    Dim orderItem As Order
-
-    Set cmd = DatabaseManager.CreateCommand(conn, _
-        "select_order_receive_by_manufacturing_plant_name_and_order_date")
-
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
-
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
-
-    Set orders = New Collection
-
-    Do While Not rs.EOF
-
-        Set orderItem = MapOrderRow(rs)
-
-        orders.Add _
-            item:=orderItem, _
-            Key:=orderItem.UUID
-
-        Set orderItem = Nothing
-
-        rs.MoveNext
-    Loop
-
-    DatabaseManager.CloseRecordset rs
-
-    Set SelectOrder = orders
+    Set ListOrders = RunList(conn, "order_list", plantItem, fromDate, toDate, page)
 
 End Function
 
 
-' select_pending_order_by_manufacturing_plant_name_and_order_date
-' Returns Order objects keyed by order UUID.
-Public Function SelectPendingOrder( _
+' order_list_count
+' Number of rows ListOrders returns over all pages.
+Public Function CountOrders( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String, _
+    ByVal plantItem As ManufacturingPlant, _
     ByVal fromDate As Date, _
-    ByVal untilDate As Date) As Collection
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Long
 
-    Dim cmd As ADODB.Command
-    Dim rs As ADODB.recordset
-    Dim orders As Collection
-    Dim orderItem As Order
-
-    Set cmd = DatabaseManager.CreateCommand(conn, _
-        "select_pending_order_by_manufacturing_plant_name_and_order_date")
-
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    DatabaseManager.AddDateParameter cmd, "p_from_date", fromDate
-    DatabaseManager.AddDateParameter cmd, "p_until_date", untilDate
-
-    Set rs = DatabaseManager.ExecuteRecordset(cmd)
-
-    Set orders = New Collection
-
-    Do While Not rs.EOF
-
-        Set orderItem = MapOrderRow(rs)
-
-        orders.Add _
-            item:=orderItem, _
-            Key:=orderItem.UUID
-
-        Set orderItem = Nothing
-
-        rs.MoveNext
-    Loop
-
-    DatabaseManager.CloseRecordset rs
-
-    Set SelectPendingOrder = orders
+    CountOrders = RunCount(conn, "order_list_count", plantItem, fromDate, toDate, page)
 
 End Function
 
 
-' update_order_po_id
-' Returns the affected row count.
-Public Function UpdateOrderPOID( _
+' order_list_pending
+' Same as ListOrders, only orders with a remaining quantity.
+Public Function ListPendingOrders( _
+    ByVal conn As ADODB.connection, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Collection
+
+    Set ListPendingOrders = RunList(conn, "order_list_pending", plantItem, fromDate, toDate, page)
+
+End Function
+
+
+' order_list_pending_count
+' Number of rows ListPendingOrders returns over all pages.
+Public Function CountPendingOrders( _
+    ByVal conn As ADODB.connection, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Long
+
+    CountPendingOrders = RunCount(conn, "order_list_pending_count", plantItem, fromDate, toDate, page)
+
+End Function
+
+
+' order_set_po_number
+Public Function SetPoNumber( _
     ByVal conn As ADODB.connection, _
     ByVal orderUUID As String, _
-    ByVal poID As String) As Long
+    ByVal poNumber As String) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_order_po_id")
+    Set cmd = managerDatabase.CreateCommand(conn, "order_set_po_number")
 
-    DatabaseManager.AddTextParameter cmd, "p_order_uuid", orderUUID
-    DatabaseManager.AddTextParameter cmd, "p_order_po_id", poID
+    managerDatabase.AddTextParameter cmd, "p_uuid", orderUUID, 36
+    managerDatabase.AddNullableTextParameter cmd, "p_po_number", poNumber, 50
 
-    UpdateOrderPOID = DatabaseManager.ExecuteNonQuery(cmd)
+    SetPoNumber = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
@@ -149,45 +127,141 @@ End Function
 ' INTERNAL
 ' =========================================================
 
-' Current recordset row -> Order (with Plant, Catalogue and
-' Vendor). Used by SelectOrder and SelectPendingOrder, which
-' return the same columns.
-Private Function MapOrderRow( _
-    ByVal rs As ADODB.recordset) As Order
+Private Function RunList( _
+    ByVal conn As ADODB.connection, _
+    ByVal queryName As String, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date, _
+    ByVal page As PageRequest) As Collection
+
+    Dim cmd As ADODB.Command
+    Dim rs As ADODB.recordset
+    Dim orders As Collection
+    Dim orderItem As Order
+
+    If page Is Nothing Then Set page = New PageRequest
+
+    Set cmd = managerDatabase.CreateCommand(conn, queryName)
+
+    AddCriteria cmd, plantItem, fromDate, toDate
+    managerDatabase.AddPageFilterParameters cmd, page
+    managerDatabase.AddPageDateKeyParameters cmd, page
+
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
+    managerDatabase.MoveToPageStart rs, page
+
+    Set orders = New Collection
+
+    Do While Not rs.EOF
+
+        If managerDatabase.IsPageFull(orders.Count, page) Then Exit Do
+
+        Set orderItem = MapOrder(rs, plantItem)
+        orders.Add orderItem, orderItem.UUID
+
+        rs.MoveNext
+
+    Loop
+
+    managerDatabase.CloseRecordset rs
+
+    Set RunList = orders
+
+End Function
+
+
+Private Function RunCount( _
+    ByVal conn As ADODB.connection, _
+    ByVal queryName As String, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date, _
+    ByVal page As PageRequest) As Long
+
+    Dim cmd As ADODB.Command
+
+    If page Is Nothing Then Set page = New PageRequest
+
+    Set cmd = managerDatabase.CreateCommand(conn, queryName)
+
+    AddCriteria cmd, plantItem, fromDate, toDate
+    managerDatabase.AddPageFilterParameters cmd, page
+
+    RunCount = managerDatabase.ExecuteCount(cmd)
+
+End Function
+
+
+Private Sub AddCriteria( _
+    ByVal cmd As ADODB.Command, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date)
+
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantItem.Id
+    managerDatabase.AddDateParameter cmd, "p_date_from", DateValue(fromDate)
+    managerDatabase.AddDateParameter cmd, "p_date_to", DateValue(toDate)
+
+End Sub
+
+
+' Current row of order_list / order_list_pending -> Order
+' with its ORDER header, sparepart and vendor.
+Private Function MapOrder( _
+    ByVal rs As ADODB.recordset, _
+    ByVal plantItem As ManufacturingPlant) As Order
 
     Dim orderItem As Order
-    Dim plantItem As Plant
-    Dim catalogueItem As Catalogue
+    Dim header As Transaction
+    Dim sparepartItem As Sparepart
     Dim vendorItem As Vendor
-    Dim poIdValue As String
+    Dim textValue As String
 
-    Set plantItem = New Plant
-    Set catalogueItem = New Catalogue
-    Set vendorItem = New Vendor
+    Set header = New Transaction
+    header.UUID = managerDatabase.FieldText(rs, "uuid")
+    header.TransactionType = "ORDER"
+    Set header.ManufacturingPlant = plantItem
+    header.ActivatedAt = managerDatabase.FieldDate(rs, "activated_at")
+
+    Set sparepartItem = New Sparepart
+    sparepartItem.Id = managerDatabase.FieldLong(rs, "sparepart_id")
+    sparepartItem.Code = managerDatabase.FieldText(rs, "sparepart_code")
+    sparepartItem.Name = managerDatabase.FieldText(rs, "sparepart_name")
+    sparepartItem.UnitOfMeasurement = managerDatabase.FieldText(rs, "sparepart_unit_of_measurement")
+
     Set orderItem = New Order
 
-    plantItem.Name = DatabaseManager.FieldText(rs, "manufacturing_plant_name")
-    catalogueItem.Name = DatabaseManager.FieldText(rs, "catalogue_name")
-    catalogueItem.unitOfMeasurement = DatabaseManager.FieldText(rs, "catalogue_unit_of_measurement")
-    vendorItem.Name = DatabaseManager.FieldText(rs, "vendor_name")
+    With orderItem
+        .Id = managerDatabase.FieldLong(rs, "id")
+        Set .Transaction = header
+        Set .Sparepart = sparepartItem
 
-    orderItem.Id = DatabaseManager.FieldLong(rs, "order_id")
-    orderItem.UUID = DatabaseManager.FieldText(rs, "order_uuid")
+        If Not managerDatabase.FieldIsNull(rs, "vendor_id") Then
+            Set vendorItem = New Vendor
+            vendorItem.Id = managerDatabase.FieldLong(rs, "vendor_id")
+            vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
+            textValue = managerDatabase.FieldText(rs, "vendor_code")
+            If Len(textValue) > 0 Then vendorItem.Code = textValue
+            Set .Vendor = vendorItem
+        End If
 
-    poIdValue = DatabaseManager.FieldText(rs, "order_poid")
-    If Len(poIdValue) > 0 Then
-        orderItem.poID = poIdValue
-    End If
+        .PoNumber = managerDatabase.FieldText(rs, "po_number")
+        .OrderDate = managerDatabase.FieldDate(rs, "order_date")
+        .Quantity = managerDatabase.FieldLong(rs, "quantity")
+        .Remarks = managerDatabase.FieldText(rs, "remarks")
+        .SystemRemarks = managerDatabase.FieldText(rs, "system_remarks")
 
-    Set orderItem.Plant = plantItem
-    orderItem.orderDate = DatabaseManager.FieldDate(rs, "order_date")
-    Set orderItem.Catalogue = catalogueItem
-    orderItem.Amount = DatabaseManager.FieldDouble(rs, "order_amount")
-    orderItem.Status = DatabaseManager.FieldText(rs, "order_status")
-    Set orderItem.Vendor = vendorItem
-    orderItem.remarks = DatabaseManager.FieldText(rs, "order_remarks")
-    orderItem.personInCharge = DatabaseManager.FieldText(rs, "order_person_in_charge")
+        textValue = managerDatabase.FieldText(rs, "person_in_charge")
+        If Len(textValue) > 0 Then .PersonInCharge = textValue
 
-    Set MapOrderRow = orderItem
+        .OkQuantityTotal = managerDatabase.FieldLong(rs, "ok_quantity_total")
+        .ReceivedQuantityTotal = managerDatabase.FieldLong(rs, "received_quantity_total")
+        .RemainingQuantity = managerDatabase.FieldLong(rs, "remaining_quantity")
+        .Status = managerDatabase.FieldText(rs, "status")
+        .EstimatedArrival = managerDatabase.FieldDate(rs, "estimated_arrival")
+    End With
+
+    Set MapOrder = orderItem
 
 End Function

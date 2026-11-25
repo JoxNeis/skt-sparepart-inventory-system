@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - MAINTENANCE WORK DETAIL
 ' Table      : maintenance_work_details
-' Error codes: entitiesMaintenanceWorkDetail (ErrorCodesEntities.bas)
+' Error codes: entitiesMaintenanceWorkDetail (managerErrorCodesEntities.bas)
 '
 ' One line of a MaintenanceWork - a task performed, optionally
 ' with the sparepart and amount used for it.
@@ -40,8 +40,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -61,8 +61,8 @@ End Property
 
 Public Property Let MaintenanceWorkId(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.InvalidMaintenanceWorkId, _
             CLASS_NAME & ".MaintenanceWorkId", _
             CLASS_NAME & ": Id maintenance work harus lebih besar dari 0."
@@ -82,8 +82,8 @@ End Property
 
 Public Property Let MaintenanceTaskId(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.InvalidMaintenanceTaskId, _
             CLASS_NAME & ".MaintenanceTaskId", _
             CLASS_NAME & ": Id task maintenance harus lebih besar dari 0."
@@ -117,8 +117,8 @@ End Property
 
 Public Property Let Amount(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.NegativeAmount, _
             CLASS_NAME & ".Amount", _
             CLASS_NAME & ": Jumlah sparepart tidak boleh negatif."
@@ -145,7 +145,7 @@ End Property
 Public Sub Validate()
 
     If UsesSparepart And mAmount = 0 Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.SparepartWithoutAmount, _
             CLASS_NAME & ".Validate", _
             CLASS_NAME & _
@@ -153,7 +153,7 @@ Public Sub Validate()
     End If
 
     If Not UsesSparepart And mAmount > 0 Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesMaintenanceWorkDetail.AmountWithoutSparepart, _
             CLASS_NAME & ".Validate", _
             CLASS_NAME & _

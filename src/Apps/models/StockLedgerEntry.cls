@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - STOCK LEDGER ENTRY (read only, no table)
 ' Source     : stock_ledger_list_by_month (vw_stock_ledger)
-' Error codes: entitiesStockLedgerEntry (ErrorCodesEntities.bas)
+' Error codes: entitiesStockLedgerEntry (managerErrorCodesEntities.bas)
 '
 ' One line of the stock card (kartu stok):
 '   IN  = verified OK quantity of an active receive
@@ -51,8 +51,8 @@ End Property
 
 Public Property Let MovementDate(ByVal value As Date)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesStockLedgerEntry.EmptyMovementDate, _
             CLASS_NAME & ".MovementDate", _
             CLASS_NAME & ": Tanggal pergerakan stok tidak boleh kosong."
@@ -72,8 +72,8 @@ End Property
 
 Public Property Let BeginningStock(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesStockLedgerEntry.NegativeBeginningStock, _
             CLASS_NAME & ".BeginningStock", _
             CLASS_NAME & ": Stok awal tidak boleh negatif."
@@ -111,8 +111,8 @@ End Property
 
 Public Property Let IncomingQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesStockLedgerEntry.NegativeIncomingQuantity, _
             CLASS_NAME & ".IncomingQuantity", _
             CLASS_NAME & ": Jumlah barang masuk tidak boleh negatif."
@@ -150,8 +150,8 @@ End Property
 
 Public Property Let OutgoingQuantity(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesStockLedgerEntry.NegativeOutgoingQuantity, _
             CLASS_NAME & ".OutgoingQuantity", _
             CLASS_NAME & ": Jumlah barang keluar tidak boleh negatif."
@@ -171,8 +171,8 @@ End Property
 
 Public Property Let EndStock(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesStockLedgerEntry.NegativeEndStock, _
             CLASS_NAME & ".EndStock", _
             CLASS_NAME & ": Stok akhir tidak boleh negatif."

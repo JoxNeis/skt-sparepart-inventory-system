@@ -11,17 +11,27 @@ Option Explicit
 ' =========================================================
 ' MODEL - TRANSACTION UPDATE REQUEST
 ' Table      : transaction_update_requests
-' Error codes: entitiesTransactionUpdateRequest (ErrorCodesEntities.bas)
+'              (+ the original / proposed document columns of
+'              transaction_update_request_list)
+' Error codes: entitiesTransactionUpdateRequest
+'              (managerErrorCodesEntities.bas)
 '
-' Approval workflow for editing an active transaction. The
-' edit is stored as a new draft (proposed) transaction.
-' Approving reverses the original and activates the proposal.
+' A proposed edit of an active document. The edit itself is
+' a DRAFT transaction (the proposed document); approving it
+' reverses the original and activates the proposal.
 '
 ' Life:  PENDING  -> Verdict = ""
 '        APPROVED -> Verdict = "APPROVED"
 '        REJECTED -> Verdict = "REJECTED"
-' Reviewer and ReviewedAt are set together with Verdict and
-' are blank while the request is pending (call Validate).
+'
+' Original and Proposed hold the document columns of
+' transaction_update_request_list without the old_ / new_
+' prefix, as a Scripting.Dictionary:
+'   uuid, document_date, quantity, ok_quantity,
+'   not_ok_quantity, remarks, person_in_charge, order_uuid,
+'   po_number, sparepart_id, sparepart_name,
+'   sparepart_unit_of_measurement, vendor_name,
+'   mobile_maintenance_name
 ' =========================================================
 
 Private Const CLASS_NAME As String = "TransactionUpdateRequest"
@@ -32,8 +42,7 @@ Private Const VERDICT_REJECTED As String = "REJECTED"
 Private Const USERNAME_MAX_LENGTH As Long = 64
 
 Private mId As Long
-Private mOriginalTransaction As Transaction
-Private mProposedTransaction As Transaction
+Private mTransactionType As String
 Private mReason As String
 Private mRequestedBy As String
 Private mRequestedAt As Date
@@ -41,6 +50,17 @@ Private mVerdict As String
 Private mReviewer As String
 Private mReviewedAt As Date
 Private mDecisionNote As String
+Private mManufacturingPlantName As String
+Private mOriginal As Object
+Private mProposed As Object
+
+
+Private Sub Class_Initialize()
+    Set mOriginal = CreateObject("Scripting.Dictionary")
+    Set mProposed = CreateObject("Scripting.Dictionary")
+    mOriginal.CompareMode = vbTextCompare
+    mProposed.CompareMode = vbTextCompare
+End Sub
 
 
 ' =========================================================
@@ -52,8 +72,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesTransactionUpdateRequest.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -65,47 +85,27 @@ End Property
 
 
 ' =========================================================
-' ORIGINAL TRANSACTION                  [original_transaction_id] NOT NULL
+' TRANSACTION TYPE                      ORDER / RECEIVE / REQUEST
+' (type of the original document)
 ' =========================================================
-Public Property Get OriginalTransaction() As Transaction
-    Set OriginalTransaction = mOriginalTransaction
+Public Property Get TransactionType() As String
+    TransactionType = mTransactionType
 End Property
 
-Public Property Set OriginalTransaction(ByVal value As Transaction)
+Public Property Let TransactionType(ByVal value As String)
 
-    If value Is Nothing Then
-        ErrorManager.ThrowError _
-            entitiesTransactionUpdateRequest.EmptyOriginalTransaction, _
-            CLASS_NAME & ".OriginalTransaction", _
-            CLASS_NAME & ": Transaksi asal tidak boleh kosong."
+    value = UCase$(Trim$(value))
+
+    If Not managerValidationText.IsInList(value, _
+        Array("ORDER", "RECEIVE", "REQUEST", "MAINTENANCE")) Then
+
+        managerError.ThrowError _
+            entitiesTransactionUpdateRequest.TransactionTypeMismatch, _
+            CLASS_NAME & ".TransactionType", _
+            CLASS_NAME & ": Tipe transaksi tidak dikenal: " & value & "."
     End If
 
-    CheckPair value, mProposedTransaction, "OriginalTransaction"
-
-    Set mOriginalTransaction = value
-
-End Property
-
-
-' =========================================================
-' PROPOSED TRANSACTION                  [proposed_transaction_id] NOT NULL UNIQUE
-' =========================================================
-Public Property Get ProposedTransaction() As Transaction
-    Set ProposedTransaction = mProposedTransaction
-End Property
-
-Public Property Set ProposedTransaction(ByVal value As Transaction)
-
-    If value Is Nothing Then
-        ErrorManager.ThrowError _
-            entitiesTransactionUpdateRequest.EmptyProposedTransaction, _
-            CLASS_NAME & ".ProposedTransaction", _
-            CLASS_NAME & ": Transaksi usulan tidak boleh kosong."
-    End If
-
-    CheckPair mOriginalTransaction, value, "ProposedTransaction"
-
-    Set mProposedTransaction = value
+    mTransactionType = value
 
 End Property
 
@@ -134,18 +134,18 @@ Public Property Let RequestedBy(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsBlank(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(value) Then
+        managerError.ThrowError _
             entitiesTransactionUpdateRequest.EmptyRequestedBy, _
             CLASS_NAME & ".RequestedBy", _
-            CLASS_NAME & ": Pemohon tidak boleh kosong."
+            CLASS_NAME & ": Pengaju tidak boleh kosong."
     End If
 
-    If ValidationText.IsLongerThan(value, USERNAME_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, USERNAME_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesTransactionUpdateRequest.RequestedByTooLong, _
             CLASS_NAME & ".RequestedBy", _
-            CLASS_NAME & ": Pemohon maksimal " & _
+            CLASS_NAME & ": Pengaju maksimal " & _
             USERNAME_MAX_LENGTH & " karakter."
     End If
 
@@ -164,7 +164,7 @@ End Property
 
 ' =========================================================
 ' VERDICT                               [verdict] TEXT(10)
-' "" (pending) / APPROVED / REJECTED
+' "" = pending, APPROVED, REJECTED
 ' =========================================================
 Public Property Get Verdict() As String
     Verdict = mVerdict
@@ -175,13 +175,13 @@ Public Property Let Verdict(ByVal value As String)
     value = UCase$(Trim$(value))
 
     If Len(value) > 0 Then
-        If Not ValidationText.IsInList(value, _
+        If Not managerValidationText.IsInList(value, _
             Array(VERDICT_APPROVED, VERDICT_REJECTED)) Then
 
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesTransactionUpdateRequest.InvalidVerdict, _
                 CLASS_NAME & ".Verdict", _
-                CLASS_NAME & ": Keputusan harus APPROVED atau REJECTED."
+                CLASS_NAME & ": Verdict harus APPROVED atau REJECTED."
         End If
     End If
 
@@ -191,8 +191,7 @@ End Property
 
 
 ' =========================================================
-' REVIEWER / REVIEWED AT                [reviewer] TEXT(64)
-'                                       [reviewed_at]
+' REVIEWER / REVIEWED AT / DECISION NOTE
 ' =========================================================
 Public Property Get Reviewer() As String
     Reviewer = mReviewer
@@ -202,21 +201,12 @@ Public Property Let Reviewer(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsLongerThan(value, USERNAME_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, USERNAME_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesTransactionUpdateRequest.ReviewerTooLong, _
             CLASS_NAME & ".Reviewer", _
             CLASS_NAME & ": Reviewer maksimal " & _
             USERNAME_MAX_LENGTH & " karakter."
-    End If
-
-    If Len(value) > 0 And Len(mRequestedBy) > 0 Then
-        If ValidationText.IsSameText(value, mRequestedBy) Then
-            ErrorManager.ThrowError _
-                entitiesTransactionUpdateRequest.ReviewerIsRequester, _
-                CLASS_NAME & ".Reviewer", _
-                CLASS_NAME & ": Reviewer tidak boleh sama dengan pemohon."
-        End If
     End If
 
     mReviewer = value
@@ -231,10 +221,6 @@ Public Property Let ReviewedAt(ByVal value As Date)
     mReviewedAt = value
 End Property
 
-
-' =========================================================
-' DECISION NOTE                         [decision_note] LONGTEXT
-' =========================================================
 Public Property Get DecisionNote() As String
     DecisionNote = mDecisionNote
 End Property
@@ -245,8 +231,71 @@ End Property
 
 
 ' =========================================================
+' MANUFACTURING PLANT NAME              (plant of the original)
+' =========================================================
+Public Property Get ManufacturingPlantName() As String
+    ManufacturingPlantName = mManufacturingPlantName
+End Property
+
+Public Property Let ManufacturingPlantName(ByVal value As String)
+    mManufacturingPlantName = Trim$(value)
+End Property
+
+
+' =========================================================
+' ORIGINAL / PROPOSED DOCUMENT
+' =========================================================
+Public Property Get Original() As Object
+    Set Original = mOriginal
+End Property
+
+Public Property Get Proposed() As Object
+    Set Proposed = mProposed
+End Property
+
+' Value of one original column (Null when not present).
+Public Function OriginalValue(ByVal key As String) As Variant
+
+    If mOriginal.Exists(key) Then
+        OriginalValue = mOriginal(key)
+    Else
+        OriginalValue = Null
+    End If
+
+End Function
+
+' Value of one proposed column (Null when not present).
+Public Function ProposedValue(ByVal key As String) As Variant
+
+    If mProposed.Exists(key) Then
+        ProposedValue = mProposed(key)
+    Else
+        ProposedValue = Null
+    End If
+
+End Function
+
+
+' =========================================================
 ' CALCULATED PROPERTIES
 ' =========================================================
+
+Public Property Get OriginalUUID() As String
+    OriginalUUID = coreHelper.TextOrEmpty(OriginalValue("uuid"))
+End Property
+
+Public Property Get ProposedUUID() As String
+    ProposedUUID = coreHelper.TextOrEmpty(ProposedValue("uuid"))
+End Property
+
+Public Property Get OriginalSparepartId() As Long
+    OriginalSparepartId = ValueAsLong(OriginalValue("sparepart_id"))
+End Property
+
+Public Property Get ProposedSparepartId() As Long
+    ProposedSparepartId = ValueAsLong(ProposedValue("sparepart_id"))
+End Property
+
 Public Property Get IsPending() As Boolean
     IsPending = (Len(mVerdict) = 0)
 End Property
@@ -259,100 +308,19 @@ Public Property Get IsRejected() As Boolean
     IsRejected = (mVerdict = VERDICT_REJECTED)
 End Property
 
-' ORDER / RECEIVE / REQUEST, from the original transaction.
-Public Property Get TransactionType() As String
-    If Not mOriginalTransaction Is Nothing Then
-        TransactionType = mOriginalTransaction.TransactionType
-    End If
-End Property
-
-
-' =========================================================
-' VALIDATE
-' ck_transaction_update_requests_verdict: Reviewer and
-' ReviewedAt are both blank while pending, and both set once
-' there is a verdict. Call it before saving.
-' =========================================================
-Public Sub Validate()
-
-    If IsPending Then
-
-        If Len(mReviewer) > 0 Or mReviewedAt <> 0 Then
-            ErrorManager.ThrowError _
-                entitiesTransactionUpdateRequest.ReviewWithoutVerdict, _
-                CLASS_NAME & ".Validate", _
-                CLASS_NAME & _
-                ": Reviewer dan tanggal review harus kosong selama belum ada keputusan."
-        End If
-
-    Else
-
-        If Len(mReviewer) = 0 Or mReviewedAt = 0 Then
-            ErrorManager.ThrowError _
-                entitiesTransactionUpdateRequest.VerdictWithoutReview, _
-                CLASS_NAME & ".Validate", _
-                CLASS_NAME & _
-                ": Keputusan harus disertai reviewer dan tanggal review."
-        End If
-
-    End If
-
-End Sub
-
 
 ' =========================================================
 ' INTERNAL
 ' =========================================================
 
-' The original and proposed transactions must be different
-' rows of the same type and plant (transaction_update_request_create).
-' Only checks what both objects have filled in.
-Private Sub CheckPair( _
-    ByVal original As Transaction, _
-    ByVal proposed As Transaction, _
-    ByVal propertyName As String)
+Private Function ValueAsLong(ByVal value As Variant) As Long
 
-    If original Is Nothing Or proposed Is Nothing Then Exit Sub
-
-    If original.IsSameAs(proposed) Then
-        ErrorManager.ThrowError _
-            entitiesTransactionUpdateRequest.SameTransaction, _
-            CLASS_NAME & "." & propertyName, _
-            CLASS_NAME & _
-            ": Transaksi usulan tidak boleh sama dengan transaksi asal."
+    If IsNull(value) Or IsEmpty(value) Then
+        ValueAsLong = 0
+    ElseIf IsNumeric(value) Then
+        ValueAsLong = CLng(value)
+    Else
+        ValueAsLong = 0
     End If
 
-    If Len(original.TransactionType) > 0 And _
-       Len(proposed.TransactionType) > 0 Then
-
-        If original.TransactionType <> proposed.TransactionType Then
-            ErrorManager.ThrowError _
-                entitiesTransactionUpdateRequest.TransactionTypeMismatch, _
-                CLASS_NAME & "." & propertyName, _
-                CLASS_NAME & _
-                ": Tipe transaksi usulan harus sama dengan transaksi asal."
-        End If
-
-    End If
-
-    If Not original.ManufacturingPlant Is Nothing And _
-       Not proposed.ManufacturingPlant Is Nothing Then
-
-        If original.ManufacturingPlant.Id > 0 And _
-           proposed.ManufacturingPlant.Id > 0 Then
-
-            If original.ManufacturingPlant.Id <> _
-               proposed.ManufacturingPlant.Id Then
-
-                ErrorManager.ThrowError _
-                    entitiesTransactionUpdateRequest.ManufacturingPlantMismatch, _
-                    CLASS_NAME & "." & propertyName, _
-                    CLASS_NAME & _
-                    ": Plant transaksi usulan harus sama dengan transaksi asal."
-            End If
-
-        End If
-
-    End If
-
-End Sub
+End Function

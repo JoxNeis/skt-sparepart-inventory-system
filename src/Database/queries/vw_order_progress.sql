@@ -5,7 +5,7 @@
 --           remaining quantity and the delivery status.
 --             BELUM DATANG    nothing received yet
 --             DATANG SEBAGIAN received, OK quantity < ordered
---             DATANG          OK quantity >= ordered
+--             DATANG SEMUA    OK quantity >= ordered
 -- =====================================================================
 SELECT
 	o.id AS id,

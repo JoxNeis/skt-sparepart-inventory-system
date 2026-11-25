@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - MANUFACTURING PLANT STOCK
 ' Table      : manufacturing_plant_stocks
-' Error codes: entitiesManufacturingPlantStock (ErrorCodesEntities.bas)
+' Error codes: entitiesManufacturingPlantStock (managerErrorCodesEntities.bas)
 '
 ' One row per (plant, sparepart): on-hand stock and the
 ' reorder point (ROP) planning inputs and outputs.
@@ -54,8 +54,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -76,7 +76,7 @@ End Property
 Public Property Set ManufacturingPlant(ByVal value As ManufacturingPlant)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.EmptyManufacturingPlant, _
             CLASS_NAME & ".ManufacturingPlant", _
             CLASS_NAME & ": Plant tidak boleh kosong."
@@ -97,7 +97,7 @@ End Property
 Public Property Set Sparepart(ByVal value As Sparepart)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.EmptySparepart, _
             CLASS_NAME & ".Sparepart", _
             CLASS_NAME & ": Sparepart tidak boleh kosong."
@@ -118,8 +118,8 @@ End Property
 
 Public Property Let CurrentStock(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeCurrentStock, _
             CLASS_NAME & ".CurrentStock", _
             CLASS_NAME & ": Stok saat ini tidak boleh negatif."
@@ -139,8 +139,8 @@ End Property
 
 Public Property Let ReorderPoint(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeReorderPoint, _
             CLASS_NAME & ".ReorderPoint", _
             CLASS_NAME & ": Reorder point tidak boleh negatif."
@@ -160,8 +160,8 @@ End Property
 
 Public Property Let SafetyStock(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeSafetyStock, _
             CLASS_NAME & ".SafetyStock", _
             CLASS_NAME & ": Safety stock tidak boleh negatif."
@@ -181,8 +181,8 @@ End Property
 
 Public Property Let LeadTimeDays(ByVal value As Long)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeLeadTimeDays, _
             CLASS_NAME & ".LeadTimeDays", _
             CLASS_NAME & ": Lead time tidak boleh negatif."
@@ -202,8 +202,8 @@ End Property
 
 Public Property Let AverageDailyUsage(ByVal value As Double)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeAverageDailyUsage, _
             CLASS_NAME & ".AverageDailyUsage", _
             CLASS_NAME & ": Rata-rata pemakaian harian tidak boleh negatif."
@@ -223,8 +223,8 @@ End Property
 
 Public Property Let DailyDemandStdDev(ByVal value As Double)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeDailyDemandStdDev, _
             CLASS_NAME & ".DailyDemandStdDev", _
             CLASS_NAME & ": Standar deviasi permintaan harian tidak boleh negatif."
@@ -245,8 +245,8 @@ End Property
 
 Public Property Let ServiceLevelZ(ByVal value As Double)
 
-    If ValidationNumeric.IsNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesManufacturingPlantStock.NegativeServiceLevelZ, _
             CLASS_NAME & ".ServiceLevelZ", _
             CLASS_NAME & ": Service level (Z) tidak boleh negatif."

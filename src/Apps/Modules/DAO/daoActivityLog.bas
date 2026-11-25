@@ -3,31 +3,34 @@ Option Explicit
 
 ' =========================================================
 ' DAO - ACTIVITY LOG
+' Table: activity_logs
 '
 ' One function = one saved Access query.
 ' Use serviceActivityLog.WriteActivityLog from services; it
 ' validates the input and checks the affected row count.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_ACTIVITY_LOG"
+Private Const MODULE_NAME As String = "daoActivityLog"
 
 
-' create_activity_log
+' activity_log_create
 ' Returns the affected row count.
 Public Function CreateActivityLog( _
     ByVal conn As ADODB.connection, _
     ByVal activityCode As String, _
     ByVal detail As String, _
-    ByVal user As String) As Long
+    ByVal json As String, _
+    ByVal username As String) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "create_activity_log")
+    Set cmd = managerDatabase.CreateCommand(conn, "activity_log_create")
 
-    DatabaseManager.AddTextParameter cmd, "p_activity_code", activityCode
-    DatabaseManager.AddLongTextParameter cmd, "p_detail", detail
-    DatabaseManager.AddTextParameter cmd, "p_user", user
+    managerDatabase.AddTextParameter cmd, "p_activity_code", activityCode, 50
+    managerDatabase.AddNullableLongTextParameter cmd, "p_detail", detail
+    managerDatabase.AddNullableLongTextParameter cmd, "p_json", json
+    managerDatabase.AddTextParameter cmd, "p_username", username, 64
 
-    CreateActivityLog = DatabaseManager.ExecuteNonQuery(cmd)
+    CreateActivityLog = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function

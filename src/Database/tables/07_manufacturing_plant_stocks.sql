@@ -40,7 +40,7 @@ CREATE TABLE [manufacturing_plant_stocks] (
 			FOREIGN KEY ([sparepart_id])
 				REFERENCES [spareparts] ([id]),
 	CONSTRAINT
-		[ck_manufacturing_plant_stocks_current_stocks]
+		[ck_manufacturing_plant_stocks_current_stock]
 			CHECK (
 				[current_stock] >= 0
 			),

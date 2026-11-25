@@ -3,95 +3,227 @@ Option Explicit
 
 ' =========================================================
 ' DAO - PLANT STOCK
+' Table: manufacturing_plant_stocks
 '
 ' One function = one saved Access query.
-' Logic lives in servicePlantStock.
+' current_stock is a cache of the stock ledger; services
+' keep it in step (servicePlantStock.RecalculateCurrentStock).
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_PLANT_STOCK"
+Private Const MODULE_NAME As String = "daoPlantStock"
 
 
-' update_current_stock
-' Adds stockChanges (can be negative) to the current stock.
-' Returns the affected row count.
-Public Function UpdateCurrentStock( _
+' manufacturing_plant_stock_list
+' Stock rows of one plant (active spareparts), by sparepart
+' name. page: filter (FilterValue on "code - name" / alias)
+' and page, keyed on (KeyText = name, KeyId = row id)
+' (Nothing = every row).
+Public Function ListByPlant( _
     ByVal conn As ADODB.connection, _
-    ByVal stockChanges As Double, _
-    ByVal catalogueName As String, _
-    ByVal manufacturingPlantName As String) As Long
+    ByVal plantItem As ManufacturingPlant, _
+    Optional ByVal page As PageRequest = Nothing) As Collection
 
     Dim cmd As ADODB.Command
+    Dim rs As ADODB.recordset
+    Dim stocks As Collection
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_current_stock")
+    If page Is Nothing Then Set page = New PageRequest
 
-    DatabaseManager.AddDoubleParameter cmd, "p_stock_changes", stockChanges
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    Set cmd = managerDatabase.CreateCommand(conn, "manufacturing_plant_stock_list")
 
-    UpdateCurrentStock = DatabaseManager.ExecuteNonQuery(cmd)
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantItem.Id
+    managerDatabase.AddPageFilterParameters cmd, page, False
+    managerDatabase.AddTextParameter cmd, "p_direction", page.Direction, 4
+    managerDatabase.AddTextParameter cmd, "p_key_text", page.KeyText, 255
+    managerDatabase.AddLongParameter cmd, "p_key_id", page.KeyId
+
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
+    managerDatabase.MoveToPageStart rs, page
+
+    Set stocks = New Collection
+
+    Do While Not rs.EOF
+        If managerDatabase.IsPageFull(stocks.Count, page) Then Exit Do
+        stocks.Add MapStock(rs, plantItem)
+        rs.MoveNext
+    Loop
+
+    managerDatabase.CloseRecordset rs
+
+    Set ListByPlant = stocks
 
 End Function
 
 
-' update_current_stock_exact
-' Overwrites the current stock with newStock.
-' Returns the affected row count.
-Public Function UpdateCurrentStockExact( _
+' manufacturing_plant_stock_count
+' Number of rows ListByPlant returns over all pages.
+Public Function CountByPlant( _
     ByVal conn As ADODB.connection, _
-    ByVal newStock As Double, _
-    ByVal catalogueName As String, _
-    ByVal manufacturingPlantName As String) As Long
+    ByVal plantItem As ManufacturingPlant, _
+    Optional ByVal page As PageRequest = Nothing) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_current_stock_exact")
+    If page Is Nothing Then Set page = New PageRequest
 
-    DatabaseManager.AddDoubleParameter cmd, "p_new_stock", newStock
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    Set cmd = managerDatabase.CreateCommand(conn, "manufacturing_plant_stock_count")
 
-    UpdateCurrentStockExact = DatabaseManager.ExecuteNonQuery(cmd)
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantItem.Id
+    managerDatabase.AddPageFilterParameters cmd, page, False
+
+    CountByPlant = managerDatabase.ExecuteCount(cmd)
 
 End Function
 
 
-' select_plant_stocks
-' Returns a disconnected recordset.
-Public Function SelectManufacturingPlantStocks( _
+' manufacturing_plant_stock_create_missing
+' Adds a zero stock row for every active sparepart the plant
+' does not have yet. Returns the number of rows added.
+Public Function CreateMissing( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String) As ADODB.recordset
+    ByVal plantId As Long) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "select_plant_stocks")
+    Set cmd = managerDatabase.CreateCommand(conn, "manufacturing_plant_stock_create_missing")
 
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantId
 
-    Set SelectManufacturingPlantStocks = DatabaseManager.ExecuteRecordset(cmd)
+    CreateMissing = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
 
-' update_rop
-' Returns the affected row count.
-Public Function UpdateROP( _
+' manufacturing_plant_stock_recalculate_reorder_point
+' Stores the planning inputs and recalculates safety stock
+' and reorder point in the query.
+Public Function RecalculateReorderPoint( _
     ByVal conn As ADODB.connection, _
+    ByVal plantId As Long, _
+    ByVal sparepartId As Long, _
+    ByVal leadTimeDays As Long, _
     ByVal averageDailyUsage As Double, _
-    ByVal sdDemand As Double, _
-    ByVal leadTime As Double, _
-    ByVal catalogueName As String, _
-    ByVal manufacturingPlantName As String) As Long
+    ByVal dailyDemandStdDev As Double) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = DatabaseManager.CreateCommand(conn, "update_rop")
+    Set cmd = managerDatabase.CreateCommand(conn, _
+        "manufacturing_plant_stock_recalculate_reorder_point")
 
-    DatabaseManager.AddDoubleParameter cmd, "p_average_daily_usage", averageDailyUsage
-    DatabaseManager.AddDoubleParameter cmd, "p_sd_demand", sdDemand
-    DatabaseManager.AddDoubleParameter cmd, "p_lead_time", leadTime
-    DatabaseManager.AddTextParameter cmd, "p_catalogue_name", catalogueName
-    DatabaseManager.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantId
+    managerDatabase.AddLongParameter cmd, "p_sparepart_id", sparepartId
+    managerDatabase.AddLongParameter cmd, "p_lead_time_days", leadTimeDays
+    managerDatabase.AddDoubleParameter cmd, "p_average_daily_usage", averageDailyUsage
+    managerDatabase.AddDoubleParameter cmd, "p_daily_demand_std_dev", dailyDemandStdDev
 
-    UpdateROP = DatabaseManager.ExecuteNonQuery(cmd)
+    RecalculateReorderPoint = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' manufacturing_plant_stock_set_current_stock
+' 0 rows when the row does not exist or the stock < 0.
+Public Function SetCurrentStock( _
+    ByVal conn As ADODB.connection, _
+    ByVal plantId As Long, _
+    ByVal sparepartId As Long, _
+    ByVal currentStock As Long) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, _
+        "manufacturing_plant_stock_set_current_stock")
+
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantId
+    managerDatabase.AddLongParameter cmd, "p_sparepart_id", sparepartId
+    managerDatabase.AddLongParameter cmd, "p_current_stock", currentStock
+
+    SetCurrentStock = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' manufacturing_plant_stock_adjust_current_stock
+' 0 rows when the stock would go below 0.
+Public Function AdjustCurrentStock( _
+    ByVal conn As ADODB.connection, _
+    ByVal plantId As Long, _
+    ByVal sparepartId As Long, _
+    ByVal quantityChange As Long) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, _
+        "manufacturing_plant_stock_adjust_current_stock")
+
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantId
+    managerDatabase.AddLongParameter cmd, "p_sparepart_id", sparepartId
+    managerDatabase.AddLongParameter cmd, "p_quantity_change", quantityChange
+
+    AdjustCurrentStock = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' manufacturing_plant_stock_update
+' Stores every planning column as given (no recalculation).
+Public Function UpdatePlantStock( _
+    ByVal conn As ADODB.connection, _
+    ByVal stockItem As ManufacturingPlantStock) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, "manufacturing_plant_stock_update")
+
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", stockItem.ManufacturingPlant.Id
+    managerDatabase.AddLongParameter cmd, "p_sparepart_id", stockItem.Sparepart.Id
+    managerDatabase.AddLongParameter cmd, "p_reorder_point", stockItem.ReorderPoint
+    managerDatabase.AddLongParameter cmd, "p_safety_stock", stockItem.SafetyStock
+    managerDatabase.AddLongParameter cmd, "p_lead_time_days", stockItem.LeadTimeDays
+    managerDatabase.AddDoubleParameter cmd, "p_average_daily_usage", stockItem.AverageDailyUsage
+    managerDatabase.AddDoubleParameter cmd, "p_daily_demand_std_dev", stockItem.DailyDemandStdDev
+    managerDatabase.AddDoubleParameter cmd, "p_service_level_z", stockItem.ServiceLevelZ
+
+    UpdatePlantStock = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' =========================================================
+' INTERNAL
+' =========================================================
+
+Private Function MapStock( _
+    ByVal rs As ADODB.recordset, _
+    ByVal plantItem As ManufacturingPlant) As ManufacturingPlantStock
+
+    Dim stockItem As ManufacturingPlantStock
+    Dim sparepartItem As Sparepart
+
+    Set sparepartItem = New Sparepart
+
+    With sparepartItem
+        .Id = managerDatabase.FieldLong(rs, "sparepart_id")
+        .Code = managerDatabase.FieldText(rs, "sparepart_code")
+        .Name = managerDatabase.FieldText(rs, "sparepart_name")
+        .UnitOfMeasurement = managerDatabase.FieldText(rs, "sparepart_unit_of_measurement")
+    End With
+
+    Set stockItem = New ManufacturingPlantStock
+
+    With stockItem
+        .Id = managerDatabase.FieldLong(rs, "id")
+        Set .ManufacturingPlant = plantItem
+        Set .Sparepart = sparepartItem
+        .CurrentStock = managerDatabase.FieldLong(rs, "current_stock")
+        .ReorderPoint = managerDatabase.FieldLong(rs, "reorder_point")
+        .SafetyStock = managerDatabase.FieldLong(rs, "safety_stock")
+        .LeadTimeDays = managerDatabase.FieldLong(rs, "lead_time_days")
+        .AverageDailyUsage = managerDatabase.FieldDouble(rs, "average_daily_usage")
+        .DailyDemandStdDev = managerDatabase.FieldDouble(rs, "daily_demand_std_dev")
+        .ServiceLevelZ = managerDatabase.FieldDouble(rs, "service_level_z")
+    End With
+
+    Set MapStock = stockItem
 
 End Function

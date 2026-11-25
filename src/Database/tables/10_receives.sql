@@ -5,6 +5,13 @@
 --          Only ok_quantity enters stock, on verification_date.
 -- Notes  : ck_receives_quantity is the same rule serviceReceive
 --          already checks (total = OK + NOT OK).
+--          received_quantity 0 = the receive was deleted (through an
+--          approved update), the same as quantity 0 on orders/requests.
+--          [transaction_id] is one-to-one with transactions. Access
+--          DDL can only make one-to-many relations, so
+--          fk_receives_transaction is added through DAO after this
+--          file runs (see $OneToOneRelations in
+--          migration\generate_migration_vba.ps1).
 -- =====================================================================
 CREATE TABLE [receives] (
 	[id]                 AUTOINCREMENT,
@@ -25,10 +32,6 @@ CREATE TABLE [receives] (
 	CONSTRAINT
 		[uq_receives_transaction]
 			UNIQUE ([transaction_id]),
-	CONSTRAINT
-		[fk_receives_transaction]
-			FOREIGN KEY ([transaction_id])
-				REFERENCES [transactions] ([id]),
 	CONSTRAINT
 		[fk_receives_order]
 			FOREIGN KEY ([order_id])

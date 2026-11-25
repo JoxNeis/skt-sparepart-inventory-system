@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - MOBILE MAINTENANCE
 ' Table      : mobile_maintenances
-' Error codes: entitiesMobileMaintenance (ErrorCodesEntities.bas)
+' Error codes: entitiesMobileMaintenance (managerErrorCodesEntities.bas)
 '
 ' Was: MobilePost
 ' Code and name are unique per plant, not globally.
@@ -40,8 +40,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesMobileMaintenance.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -62,7 +62,7 @@ End Property
 Public Property Set ManufacturingPlant(ByVal value As ManufacturingPlant)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesMobileMaintenance.EmptyManufacturingPlant, _
             CLASS_NAME & ".ManufacturingPlant", _
             CLASS_NAME & ": Plant tidak boleh kosong."
@@ -174,16 +174,16 @@ Private Function CheckText( _
     value = Trim$(value)
 
     If emptyCode <> 0 Then
-        If ValidationText.IsBlank(value) Then
-            ErrorManager.ThrowError _
+        If managerValidationText.IsBlank(value) Then
+            managerError.ThrowError _
                 emptyCode, _
                 CLASS_NAME & "." & propertyName, _
                 CLASS_NAME & ": " & label & " tidak boleh kosong."
         End If
     End If
 
-    If ValidationText.IsLongerThan(value, maxLength) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, maxLength) Then
+        managerError.ThrowError _
             tooLongCode, _
             CLASS_NAME & "." & propertyName, _
             CLASS_NAME & ": " & label & " maksimal " & _

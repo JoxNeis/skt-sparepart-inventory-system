@@ -6,14 +6,15 @@ Option Explicit
 '
 ' Helper used by other services INSIDE their transaction.
 ' It receives the caller's connection and never begins,
-' commits or rolls back by itself.
+' commits or rolls back by itself, so the log row is saved
+' together with the change it describes.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "SERVICE_ACTIVITY_LOG"
+Private Const MODULE_NAME As String = "serviceActivityLog"
 
 ' =========================================================
 ' ERROR CODES (17100 - 17199)
-' Usage: ErrorManager.ThrowError serviceActivityLog.InsertFailed, ...
+' Usage: managerError.ThrowError serviceActivityLog.InsertFailed, ...
 ' =========================================================
 Public Const EmptyActivityCode As Long = 17101
 Public Const EmptyActivityUser As Long = 17102     ' user cannot be determined
@@ -21,11 +22,15 @@ Public Const InsertFailed As Long = 17103          ' 0 rows inserted
 
 
 ' Insert one activity log row on the caller's connection.
-' user defaults to pConfig.currentUser().
+'   activityCode : e.g. Order.Create, Vendor.Update
+'   detail       : human-readable text
+'   json         : the document / master data as JSON
+'   user         : defaults to coreConfig.currentUser()
 Public Sub WriteActivityLog( _
     ByVal conn As ADODB.connection, _
     ByVal activityCode As String, _
     ByVal detail As String, _
+    Optional ByVal json As String = vbNullString, _
     Optional ByVal user As String = vbNullString)
 
     On Error GoTo ErrorHandler
@@ -36,40 +41,38 @@ Public Sub WriteActivityLog( _
     activityCode = Trim$(activityCode)
     user = Trim$(user)
 
-    If ValidationText.IsBlank(user) Then
-        user = Trim$(pConfig.currentUser())
+    If managerValidationText.IsBlank(user) Then
+        user = Trim$(coreConfig.currentUser())
     End If
 
-    If ValidationText.IsBlank(activityCode) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(activityCode) Then
+        managerError.ThrowError _
             serviceActivityLog.EmptyActivityCode, _
             MODULE_NAME & ".WriteActivityLog", _
             "Activity code tidak boleh kosong."
     End If
 
-    If ValidationText.IsBlank(user) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(user) Then
+        managerError.ThrowError _
             serviceActivityLog.EmptyActivityUser, _
             MODULE_NAME & ".WriteActivityLog", _
             "User activity log tidak dapat ditentukan."
     End If
 
     affected = daoActivityLog.CreateActivityLog( _
-        conn, activityCode, detail, user)
+        conn, activityCode, detail, json, user)
 
-    If ValidationNumeric.IsLessThan(affected, 1) Then
-        ErrorManager.ThrowError _
-            serviceActivityLog.InsertFailed, _
-            MODULE_NAME & ".WriteActivityLog", _
-            "Activity log tidak tersimpan (0 baris terpengaruh)."
-    End If
+    managerDatabase.RequireAffectedRows affected, 1, _
+        serviceActivityLog.InsertFailed, _
+        MODULE_NAME & ".WriteActivityLog", _
+        "Activity log tidak tersimpan (0 baris terpengaruh)."
 
     Exit Sub
 
 ErrorHandler:
-    errInfo = ErrorManager.CaptureError()
+    errInfo = managerError.CaptureError()
 
-    ErrorManager.Rethrow errInfo, _
+    managerError.Rethrow errInfo, _
         MODULE_NAME & ".WriteActivityLog", _
         "Gagal membuat activity log."
 

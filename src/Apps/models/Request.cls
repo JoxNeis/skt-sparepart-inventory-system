@@ -11,7 +11,7 @@ Option Explicit
 ' =========================================================
 ' MODEL - REQUEST
 ' Table      : requests
-' Error codes: entitiesRequest (ErrorCodesEntities.bas)
+' Error codes: entitiesRequest (managerErrorCodesEntities.bas)
 '
 ' Detail of a REQUEST transaction - spareparts issued from
 ' the plant store to a mobile maintenance. Leaves stock on
@@ -53,8 +53,8 @@ End Property
 
 Public Property Let Id(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesRequest.NegativeId, _
             CLASS_NAME & ".Id", _
             CLASS_NAME & ": Id harus lebih besar dari 0."
@@ -76,7 +76,7 @@ End Property
 Public Property Set Transaction(ByVal value As Transaction)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesRequest.EmptyTransaction, _
             CLASS_NAME & ".Transaction", _
             CLASS_NAME & ": Transaksi tidak boleh kosong."
@@ -84,7 +84,7 @@ Public Property Set Transaction(ByVal value As Transaction)
 
     If Len(value.TransactionType) > 0 Then
         If value.TransactionType <> TRANSACTION_TYPE Then
-            ErrorManager.ThrowError _
+            managerError.ThrowError _
                 entitiesRequest.WrongTransactionType, _
                 CLASS_NAME & ".Transaction", _
                 CLASS_NAME & ": Tipe transaksi harus " & _
@@ -107,7 +107,7 @@ End Property
 Public Property Set MobileMaintenance(ByVal value As MobileMaintenance)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesRequest.EmptyMobileMaintenance, _
             CLASS_NAME & ".MobileMaintenance", _
             CLASS_NAME & ": Mobile maintenance tidak boleh kosong."
@@ -128,7 +128,7 @@ End Property
 Public Property Set Sparepart(ByVal value As Sparepart)
 
     If value Is Nothing Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesRequest.EmptySparepart, _
             CLASS_NAME & ".Sparepart", _
             CLASS_NAME & ": Sparepart tidak boleh kosong."
@@ -148,15 +148,15 @@ End Property
 
 Public Property Let RequestDate(ByVal value As Date)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsZeroOrNegative(value) Then
+        managerError.ThrowError _
             entitiesRequest.EmptyRequestDate, _
             CLASS_NAME & ".RequestDate", _
             CLASS_NAME & ": Tanggal request tidak boleh kosong."
     End If
 
     If DateValue(value) > VBA.Date Then
-        ErrorManager.ThrowError _
+        managerError.ThrowError _
             entitiesRequest.FutureRequestDate, _
             CLASS_NAME & ".RequestDate", _
             CLASS_NAME & ": Tanggal request tidak boleh berada di masa depan."
@@ -168,7 +168,9 @@ End Property
 
 
 ' =========================================================
-' QUANTITY                              [quantity] LONG NOT NULL > 0
+' QUANTITY                              [quantity] LONG NOT NULL >= 0
+' 0 = deleted through an approved update. A NEW request must
+' be above 0: serviceRequest checks that.
 ' =========================================================
 Public Property Get Quantity() As Long
     Quantity = mQuantity
@@ -176,11 +178,11 @@ End Property
 
 Public Property Let Quantity(ByVal value As Long)
 
-    If ValidationNumeric.IsZeroOrNegative(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationNumeric.IsNegative(value) Then
+        managerError.ThrowError _
             entitiesRequest.InvalidQuantity, _
             CLASS_NAME & ".Quantity", _
-            CLASS_NAME & ": Jumlah barang harus lebih besar dari 0."
+            CLASS_NAME & ": Jumlah barang tidak boleh negatif."
     End If
 
     mQuantity = value
@@ -219,15 +221,15 @@ Public Property Let PersonInCharge(ByVal value As String)
 
     value = Trim$(value)
 
-    If ValidationText.IsBlank(value) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsBlank(value) Then
+        managerError.ThrowError _
             entitiesRequest.EmptyPersonInCharge, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge tidak boleh kosong."
     End If
 
-    If ValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
-        ErrorManager.ThrowError _
+    If managerValidationText.IsLongerThan(value, PERSON_IN_CHARGE_MAX_LENGTH) Then
+        managerError.ThrowError _
             entitiesRequest.PersonInChargeTooLong, _
             CLASS_NAME & ".PersonInCharge", _
             CLASS_NAME & ": Person in charge maksimal " & _
