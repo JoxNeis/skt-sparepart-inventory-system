@@ -2,104 +2,87 @@ Attribute VB_Name = "serviceTransaction"
 Option Explicit
 
 ' =========================================================
-' SERVICE - TRANSACTION
+' SERVICE - TRANSACTION (document header)
 '
-' Helpers used by other services INSIDE their transaction.
-' They receive the caller's connection and never begin,
-' commit or roll back by themselves.
+' Helpers used by the document services (order, receive,
+' request, update request) INSIDE their transaction. Every
+' function receives the caller's connection.
+'
+' Document number: <PLANT>-<PREFIX>-<yyyymmdd>-<nnn>
+'   ORDER       -> ORD      RECEIVE     -> RCV
+'   REQUEST     -> WRQ      MAINTENANCE -> MTW
+' The date is the document date (order / arrival / request
+' date); the sequence restarts every day per plant and prefix.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "SERVICE_TRANSACTION"
+Private Const MODULE_NAME As String = "serviceTransaction"
 
 ' =========================================================
 ' ERROR CODES (17900 - 17999)
 ' Usage: managerError.ThrowError serviceTransaction.InvalidTransactionType, ...
 ' =========================================================
-Public Const InvalidTransactionType As Long = 17901         ' not ORDER / REQUEST / RECEIVE / MAINTENANCE
-Public Const EmptyGeneratedUUID As Long = 17902             ' select_uuid returned no row / blank
-Public Const NoRowAffectedCreateTransaction As Long = 17903 ' 0 rows inserted
-Public Const EmptyTransactionCreator As Long = 17904        ' current user is blank
-Public Const TransactionReversalFailed As Long = 17905      ' reversal affected <> 1 row
-Public Const TransactionActivationFailed As Long = 17906    ' activation affected <> 1 row
-Public Const EmptyTransactionUUID As Long = 17907
+Public Const InvalidTransactionType As Long = 17901
+Public Const EmptyPlant As Long = 17902
+Public Const SequenceExhausted As Long = 17903      ' 999 documents on one day
+Public Const CreateFailed As Long = 17904
+Public Const ActivateFailed As Long = 17905         ' not a draft / reversed
+Public Const ReverseFailed As Long = 17906          ' already reversed
+Public Const EmptyUUID As Long = 17907
 
 
-' Generate a UUID and insert the transaction row.
-'
-' transactionType : ORDER, REQUEST or RECEIVE
-' isActive        : True  -> active_at = transactionDate
-'                   False -> active_at = Null (proposed update)
-'
-' Returns the new transaction UUID.
+' Create a document header and return its new number.
+'   isActive = True  : active document (activated now)
+'   isActive = False : draft (a proposed update)
 Public Function CreateTransaction( _
     ByVal conn As ADODB.connection, _
+    ByVal plantItem As ManufacturingPlant, _
     ByVal transactionType As String, _
-    ByVal transactionDate As Date, _
-    ByVal isActive As Boolean) As String
+    ByVal documentDate As Date, _
+    ByVal isActive As Boolean, _
+    ByVal createdBy As String) As String
 
     On Error GoTo ErrorHandler
 
-    Dim transactionCode As String
     Dim transactionUUID As String
-    Dim createdBy As String
-    Dim activeAt As Variant
+    Dim activatedAt As Variant
     Dim affected As Long
     Dim errInfo As ErrorInfo
 
     transactionType = UCase$(Trim$(transactionType))
 
-    ' =====================================================
-    ' Step 1: Map transaction type to UUID prefix
-    ' =====================================================
-    transactionCode = GetTransactionCode(transactionType)
-
-    If managerValidationText.IsBlank(transactionCode) Then
+    If plantItem Is Nothing Then
         managerError.ThrowError _
-            serviceTransaction.InvalidTransactionType, _
+            serviceTransaction.EmptyPlant, _
             MODULE_NAME & ".CreateTransaction", _
-            "Transaction type harus ORDER, RECEIVE, REQUEST, atau MAINTENANCE."
+            "Plant transaksi tidak boleh kosong."
     End If
 
-    createdBy = Trim$(coreConfig.currentUser())
-
-    If managerValidationText.IsBlank(createdBy) Then
-        managerError.ThrowError _
-            serviceTransaction.EmptyTransactionCreator, _
-            MODULE_NAME & ".CreateTransaction", _
-            "User pembuat transaction tidak dapat ditentukan."
-    End If
-
-    ' =====================================================
-    ' Step 2: Generate UUID
-    ' =====================================================
-    transactionUUID = daoTransaction.SelectUUID( _
-        conn, transactionCode, transactionDate)
+    transactionUUID = daoTransaction.GetNextUUID( _
+        conn, plantItem.Code, UuidPrefix(transactionType), documentDate)
 
     If managerValidationText.IsBlank(transactionUUID) Then
         managerError.ThrowError _
-            serviceTransaction.EmptyGeneratedUUID, _
+            serviceTransaction.SequenceExhausted, _
             MODULE_NAME & ".CreateTransaction", _
-            "UUID gagal dibuat karena query tidak menghasilkan data."
+            "Nomor dokumen " & transactionType & " untuk tanggal " & _
+            Format$(documentDate, "dd-mm-yyyy") & _
+            " sudah habis (maksimal 999 dokumen per hari)."
     End If
 
-    ' =====================================================
-    ' Step 3: Insert transaction
-    ' =====================================================
     If isActive Then
-        activeAt = transactionDate
+        activatedAt = Now
     Else
-        activeAt = Null
+        activatedAt = Null
     End If
 
     affected = daoTransaction.CreateTransaction( _
-        conn, transactionUUID, transactionType, createdBy, activeAt)
+        conn, transactionUUID, transactionType, plantItem.Id, _
+        createdBy, activatedAt)
 
-    If managerValidationNumeric.IsLessThan(affected, 1) Then
-        managerError.ThrowError _
-            serviceTransaction.NoRowAffectedCreateTransaction, _
-            MODULE_NAME & ".CreateTransaction", _
-            "Transaction tidak tersimpan karena 0 baris terpengaruh."
-    End If
+    managerDatabase.RequireAffectedRows affected, 1, _
+        serviceTransaction.CreateFailed, _
+        MODULE_NAME & ".CreateTransaction", _
+        "Header transaksi " & transactionUUID & " tidak tersimpan."
 
     CreateTransaction = transactionUUID
 
@@ -110,113 +93,85 @@ ErrorHandler:
 
     managerError.Rethrow errInfo, _
         MODULE_NAME & ".CreateTransaction", _
-        "Gagal membuat transaction."
+        "Gagal membuat header transaksi " & transactionType & "."
 
 End Function
 
 
-' Mark the original transaction as reversed. Exactly one
-' row must change.
-Public Sub ReverseTransaction( _
-    ByVal conn As ADODB.connection, _
-    ByVal originalTransactionUUID As String)
-
-    On Error GoTo ErrorHandler
-
-    Dim affected As Long
-    Dim errInfo As ErrorInfo
-
-    originalTransactionUUID = Trim$(originalTransactionUUID)
-
-    If managerValidationText.IsBlank(originalTransactionUUID) Then
-        managerError.ThrowError _
-            serviceTransaction.EmptyTransactionUUID, _
-            MODULE_NAME & ".ReverseTransaction", _
-            "UUID transaksi original tidak boleh kosong."
-    End If
-
-    affected = daoTransaction.ReverseTransaction( _
-        conn, originalTransactionUUID)
-
-    If affected <> 1 Then
-        managerError.ThrowError _
-            serviceTransaction.TransactionReversalFailed, _
-            MODULE_NAME & ".ReverseTransaction", _
-            "Transaksi original tidak berhasil dibalik. " & _
-            "Jumlah baris terpengaruh: " & CStr(affected) & "."
-    End If
-
-    Exit Sub
-
-ErrorHandler:
-    errInfo = managerError.CaptureError()
-
-    managerError.Rethrow errInfo, _
-        MODULE_NAME & ".ReverseTransaction", _
-        "Gagal membalik transaksi original."
-
-End Sub
-
-
-' Activate the proposed transaction. Exactly one row must
-' change.
+' Draft -> active.
 Public Sub ActivateTransaction( _
     ByVal conn As ADODB.connection, _
     ByVal transactionUUID As String)
 
-    On Error GoTo ErrorHandler
-
     Dim affected As Long
-    Dim errInfo As ErrorInfo
 
-    transactionUUID = Trim$(transactionUUID)
+    RequireUUID transactionUUID, MODULE_NAME & ".ActivateTransaction"
 
-    If managerValidationText.IsBlank(transactionUUID) Then
-        managerError.ThrowError _
-            serviceTransaction.EmptyTransactionUUID, _
-            MODULE_NAME & ".ActivateTransaction", _
-            "UUID transaksi proposed tidak boleh kosong."
-    End If
+    affected = daoTransaction.ActivateTransaction(conn, transactionUUID)
 
-    affected = daoTransaction.ActivateTransaction( _
-        conn, transactionUUID)
-
-    If affected <> 1 Then
-        managerError.ThrowError _
-            serviceTransaction.TransactionActivationFailed, _
-            MODULE_NAME & ".ActivateTransaction", _
-            "Transaksi proposed tidak berhasil diaktifkan. " & _
-            "Jumlah baris terpengaruh: " & CStr(affected) & "."
-    End If
-
-    Exit Sub
-
-ErrorHandler:
-    errInfo = managerError.CaptureError()
-
-    managerError.Rethrow errInfo, _
+    managerDatabase.RequireAffectedRows affected, 1, _
+        serviceTransaction.ActivateFailed, _
         MODULE_NAME & ".ActivateTransaction", _
-        "Gagal mengaktifkan transaksi proposed."
+        "Transaksi " & transactionUUID & _
+        " tidak dapat diaktifkan (bukan draft atau sudah dibatalkan)."
 
 End Sub
 
 
-' ORDER -> ORD, REQUEST -> WRQ, RECEIVE -> RCV,
-' MAINTENANCE -> MTW, else "".
-Private Function GetTransactionCode( _
+' Active or draft -> reversed.
+Public Sub ReverseTransaction( _
+    ByVal conn As ADODB.connection, _
+    ByVal transactionUUID As String, _
+    ByVal reversedBy As String)
+
+    Dim affected As Long
+
+    RequireUUID transactionUUID, MODULE_NAME & ".ReverseTransaction"
+
+    affected = daoTransaction.ReverseTransaction( _
+        conn, transactionUUID, reversedBy)
+
+    managerDatabase.RequireAffectedRows affected, 1, _
+        serviceTransaction.ReverseFailed, _
+        MODULE_NAME & ".ReverseTransaction", _
+        "Transaksi " & transactionUUID & _
+        " tidak dapat dibatalkan (sudah dibatalkan sebelumnya)."
+
+End Sub
+
+
+' ORD / RCV / WRQ / MTW
+Public Function UuidPrefix( _
     ByVal transactionType As String) As String
 
-    Select Case transactionType
-        Case "ORDER"
-            GetTransactionCode = "ORD"
-        Case "REQUEST"
-            GetTransactionCode = "WRQ"
-        Case "RECEIVE"
-            GetTransactionCode = "RCV"
-        Case "MAINTENANCE"
-            GetTransactionCode = "MTW"
+    Select Case UCase$(Trim$(transactionType))
+        Case "ORDER":       UuidPrefix = "ORD"
+        Case "RECEIVE":     UuidPrefix = "RCV"
+        Case "REQUEST":     UuidPrefix = "WRQ"
+        Case "MAINTENANCE": UuidPrefix = "MTW"
         Case Else
-            GetTransactionCode = vbNullString
+            managerError.ThrowError _
+                serviceTransaction.InvalidTransactionType, _
+                MODULE_NAME & ".UuidPrefix", _
+                "Tipe transaksi tidak dikenal: " & transactionType & "."
     End Select
 
 End Function
+
+
+' =========================================================
+' INTERNAL
+' =========================================================
+
+Private Sub RequireUUID( _
+    ByVal transactionUUID As String, _
+    ByVal errorSource As String)
+
+    If managerValidationText.IsBlank(transactionUUID) Then
+        managerError.ThrowError _
+            serviceTransaction.EmptyUUID, _
+            errorSource, _
+            "Nomor dokumen tidak boleh kosong."
+    End If
+
+End Sub

@@ -9,7 +9,8 @@ Option Explicit
 '     status bar) while a button is running
 '   - User messages (info, warning, confirmation)
 '   - Reading / clearing single input cells
-'   - Date picker (formTanggal)
+'   - Date picker (formTanggal), opened by double-click
+'   - Text prompt (AskText)
 '
 ' Excel tables (ListObject) are handled by managerTable.
 ' Errors are shown with managerError.ShowError.
@@ -296,18 +297,29 @@ Public Function IsCellDate( _
 End Function
 
 
-' Clear the contents of one or more cells.
+' Clear the contents of one or more cells. A single cell
+' that is part of a merged area clears the whole area
+' (ClearContents on part of a merged area raises 1004).
 '   managerForm.ClearCells Me, "B4", "B5", "B6"
 Public Sub ClearCells( _
     ByVal ws As Worksheet, _
     ParamArray cellAddresses() As Variant)
 
     Dim cellAddress As Variant
+    Dim target As Range
 
     RequireWorksheet ws, MODULE_NAME & ".ClearCells"
 
     For Each cellAddress In cellAddresses
-        ws.Range(CStr(cellAddress)).ClearContents
+
+        Set target = ws.Range(CStr(cellAddress))
+
+        If target.Cells.Count = 1 Then
+            target.MergeArea.ClearContents
+        Else
+            target.ClearContents
+        End If
+
     Next cellAddress
 
 End Sub
@@ -317,38 +329,71 @@ End Sub
 ' DATE PICKER (formTanggal)
 ' =========================================================
 
-' Open formTanggal for the target cell.
+' Open formTanggal for the target cell. For a merged area
+' the date is written to its top-left cell.
 Public Sub ShowDatePicker( _
     ByVal target As Range)
 
-    Set CallerCell = target
+    Set CallerCell = target.Cells(1, 1).MergeArea.Cells(1, 1)
     formTanggal.Show
+    Set CallerCell = Nothing
 
 End Sub
 
 
-' For Worksheet_SelectionChange: open the date picker when
-' the selection touches dateCells. Events are switched off
-' while the form is open and always switched on again.
+' For Worksheet_BeforeDoubleClick: open the date picker when
+' the double-clicked cell touches dateCells. Returns True
+' (and sets cancel, so Excel does not enter edit mode) when
+' the picker was shown.
 '
-'   Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-'       managerForm.HandleDatePickerSelection Target, Me.Range("B6")
-'   End Sub
-Public Sub HandleDatePickerSelection( _
+'   If managerForm.HandleDatePickerDoubleClick( _
+'       Target, Me.Range("K7"), Cancel) Then Exit Sub
+Public Function HandleDatePickerDoubleClick( _
     ByVal target As Range, _
-    ByVal dateCells As Range)
+    ByVal dateCells As Range, _
+    ByRef cancel As Boolean) As Boolean
 
-    On Error GoTo CleanUp
+    HandleDatePickerDoubleClick = False
 
-    If IsInRange(target, dateCells) Then
-        Application.EnableEvents = False
-        ShowDatePicker target
+    If Not IsInRange(target.Cells(1, 1), dateCells) Then Exit Function
+
+    cancel = True
+    ShowDatePicker target.Cells(1, 1)
+
+    HandleDatePickerDoubleClick = True
+
+End Function
+
+
+' =========================================================
+' TEXT PROMPT
+' =========================================================
+
+' Ask for a line of text. cancelled is True when the user
+' pressed Cancel (an empty answer is NOT a cancel).
+Public Function AskText( _
+    ByVal message As String, _
+    ByRef cancelled As Boolean, _
+    Optional ByVal title As String = vbNullString, _
+    Optional ByVal defaultText As String = vbNullString) As String
+
+    Dim answer As Variant
+
+    answer = Application.InputBox( _
+        Prompt:=message, _
+        title:=DefaultTitle(title), _
+        Default:=defaultText, _
+        Type:=2)
+
+    If VarType(answer) = vbBoolean Then
+        cancelled = True
+        AskText = vbNullString
+    Else
+        cancelled = False
+        AskText = Trim$(CStr(answer))
     End If
 
-CleanUp:
-    Application.EnableEvents = True
-
-End Sub
+End Function
 
 
 ' =========================================================

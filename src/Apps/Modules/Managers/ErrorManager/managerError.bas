@@ -18,10 +18,12 @@ Option Explicit
 '       managerDatabase.ConnectionFailed
 '       managerTable.ColumnNotFound
 '
-'   Class modules and worksheet modules cannot hold Public
-'   Const, so their codes are Public Enums in:
+'   Class modules cannot hold Public Const, so the codes of
+'   the models are Public Enums in:
 '       managerErrorCodesEntities  ->  entitiesOrder.NegativeId
-'       managerErrorCodesSheets    ->  sheetInputOrder.EmptyPlantName
+'   Worksheet modules only forward events to controllers, so
+'   sheet errors belong to the controller modules:
+'       controllerInputOrder.NoOrderRow
 '
 ' Raising an error (validation functions return Boolean,
 ' the caller decides to throw):
@@ -63,6 +65,11 @@ Option Explicit
 '       10200  coreHelper
 '       10300  managerForm
 '       10400  managerTable
+'       10500  managerSheet
+'       10600  managerList
+'       10700  managerPaging
+'       10800  coreApp
+'       10900  managerEmail
 '
 '   11000 - 11999  Entities (class modules, blocks of 50)
 '       11000  entitiesManufacturingPlant
@@ -82,61 +89,57 @@ Option Explicit
 '       11700  entitiesAssembly
 '       11750  entitiesStockLedgerEntry
 '
-'   12000 - 13999  DAO modules
+'   12000 - 13999  DAO modules (raise nothing themselves)
 '       12100  daoActivityLog
-'       12200  daoCatalogue
-'       12300  daoMobilePost
+'       12200  daoSparepart
+'       12300  daoMobileMaintenance
 '       12400  daoOrder
 '       12500  daoPlantStock
 '       12600  daoReceive
 '       12700  daoRequest
-'       12800  daoStockMovement
+'       12800  daoStockLedger
 '       12900  daoTransaction
-'       13000  daoTransactionRequestUpdate
-'       13100  daoUpdateOrder
-'       13200  daoUpdateReceive
-'       13300  daoUpdateRequest
+'       13000  daoTransactionUpdateRequest
 '       13400  daoUser
 '       13500  daoVendor
+'       13600  daoManufacturingPlant
 '
-'   14000 - 15999  Worksheets and user forms
-'       14100  sheetInputOrder
-'       14200  sheetInputPenerimaan
-'       14300  sheetInputRequest
-'       14400  sheetInventory
-'       14500  sheetKartuStock
-'       14600  sheetMasterDataCatalogue
-'       14700  sheetMasterDataMobilePost
-'       14800  sheetMasterDataUser
-'       14900  sheetMasterDataVendor
-'       15000  sheetRecapOrder
-'       15100  sheetRecapPendingOrder
-'       15200  sheetRecapPenerimaan
-'       15300  sheetRecapRequest
-'       15400  sheetUpdateOrder
-'       15500  sheetUpdatePenerimaan
-'       15600  sheetUpdateRequest
+'   14000 - 15999  Controllers (one per sheet)
+'       14000  controllerShared
+'       14100  controllerInputOrder
+'       14200  controllerInputPenerimaan
+'       14300  controllerInputRequest
+'       14400  controllerRekapInventory
+'       14500  controllerKartuStock
+'       14600  controllerMDSparepart
+'       14700  controllerMDPosMobile
+'       14800  controllerMDUser
+'       14900  controllerMDVendor
+'       15000  controllerRekapOrder
+'       15100  controllerRekapPendingOrder
+'       15200  controllerRekapPenerimaan
+'       15300  controllerRekapRequest
+'       15400  controllerRequestUpdate
+'       15500  controllerDashboard
+'       15600  controllerSettings
 '
 '   16000 - 16999  Test modules
-'       16100  testDaoOrder
-'       16200  testDaoReceive
-'       16300  testDaoRequest
-'       16400  testDaoStockMovement
-'       16500  testDaoTransaction
 '
 '   17000 - 18999  Services (business logic + transactions)
 '       17100  serviceActivityLog
-'       17200  serviceCatalogue
-'       17300  serviceMobilePost
+'       17200  serviceSparepart
+'       17300  serviceMobileMaintenance
 '       17400  serviceOrder
 '       17500  servicePlantStock
 '       17600  serviceReceive
 '       17700  serviceRequest
-'       17800  serviceStockMovement
+'       17800  serviceStockLedger
 '       17900  serviceTransaction
-'       18000  serviceTransactionRequestUpdate
+'       18000  serviceTransactionUpdateRequest
 '       18100  serviceUser
 '       18200  serviceVendor
+'       18300  serviceManufacturingPlant
+'       18400  serviceDashboard
 '
 ' DAO modules only run one saved query per function, so
 ' they normally raise nothing themselves: connection,

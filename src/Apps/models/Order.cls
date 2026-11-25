@@ -46,6 +46,7 @@ Private mOkQuantityTotal As Long
 Private mReceivedQuantityTotal As Long
 Private mRemainingQuantity As Long
 Private mStatus As String
+Private mEstimatedArrival As Date
 
 
 ' =========================================================
@@ -198,7 +199,9 @@ End Property
 
 
 ' =========================================================
-' QUANTITY                              [quantity] LONG NOT NULL > 0
+' QUANTITY                              [quantity] LONG NOT NULL >= 0
+' 0 = deleted through an approved update. A NEW order must
+' be above 0: serviceOrder checks that.
 ' =========================================================
 Public Property Get Quantity() As Long
     Quantity = mQuantity
@@ -206,11 +209,11 @@ End Property
 
 Public Property Let Quantity(ByVal value As Long)
 
-    If managerValidationNumeric.IsZeroOrNegative(value) Then
+    If managerValidationNumeric.IsNegative(value) Then
         managerError.ThrowError _
             entitiesOrder.InvalidQuantity, _
             CLASS_NAME & ".Quantity", _
-            CLASS_NAME & ": Jumlah order harus lebih besar dari 0."
+            CLASS_NAME & ": Jumlah order tidak boleh negatif."
     End If
 
     mQuantity = value
@@ -356,6 +359,20 @@ Public Property Let Status(ByVal value As String)
 
     mStatus = value
 
+End Property
+
+
+' =========================================================
+' ESTIMATED ARRIVAL (read from order_list, not stored)
+' order_date + lead time of the plant stock row; 0 = unknown
+' (lead time 0).
+' =========================================================
+Public Property Get EstimatedArrival() As Date
+    EstimatedArrival = mEstimatedArrival
+End Property
+
+Public Property Let EstimatedArrival(ByVal value As Date)
+    mEstimatedArrival = value
 End Property
 
 

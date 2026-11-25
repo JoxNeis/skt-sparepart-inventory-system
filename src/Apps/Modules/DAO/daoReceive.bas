@@ -2,248 +2,239 @@ Attribute VB_Name = "daoReceive"
 Option Explicit
 
 ' =========================================================
-' DAO - RECEIVE
+' DAO - RECEIVE (penerimaan)
+' Table: receives
 '
 ' One function = one saved Access query.
 ' The connection (and its running transaction) is owned by
-' the calling service. Validation, row-count checks, stock
-' changes and activity logs are done by serviceReceive.
+' the calling service. Validation, stock recalculation and
+' activity logs are done by serviceReceive.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_RECEIVE"
+Private Const MODULE_NAME As String = "daoReceive"
 
 
-' create_receive
-' Returns the affected row count.
+' receive_create
+' The RECEIVE header (transactionUUID) must exist. 0 rows
+' when the order is not active or belongs to another plant.
 Public Function CreateReceive( _
     ByVal conn As ADODB.connection, _
     ByVal transactionUUID As String, _
-    ByVal orderTransactionUUID As String, _
+    ByVal orderUUID As String, _
     ByVal receiveItem As Receive) As Long
 
     Dim cmd As ADODB.Command
+    Dim verificationDate As Variant
 
-    Set cmd = managerDatabase.CreateCommand(conn, "create_receive")
+    verificationDate = Null
+    If receiveItem.IsVerified Then
+        verificationDate = DateValue(receiveItem.VerificationDate)
+    End If
 
-    managerDatabase.AddTextParameter cmd, "p_receive_transaction_uuid", transactionUUID
-    managerDatabase.AddTextParameter cmd, "p_order_transaction_uuid", orderTransactionUUID
-    managerDatabase.AddDateParameter cmd, "p_arrival_date", receiveItem.ArrivalDate
-    managerDatabase.AddDateParameter cmd, "p_verification_date", receiveItem.VerificationDate
-    managerDatabase.AddDoubleParameter cmd, "p_receive_total_amount", receiveItem.totalReceiveAmount
-    managerDatabase.AddDoubleParameter cmd, "p_receive_ok_amount", receiveItem.okAmount
-    managerDatabase.AddDoubleParameter cmd, "p_receive_not_ok_amount", receiveItem.notOKAmount
-    managerDatabase.AddTextParameter cmd, "p_receive_remarks", receiveItem.remarks
-    managerDatabase.AddTextParameter cmd, "p_receive_system_remarks", receiveItem.SystemRemarks
-    managerDatabase.AddTextParameter cmd, "p_receive_person_in_charge", receiveItem.personInCharge
+    Set cmd = managerDatabase.CreateCommand(conn, "receive_create")
+
+    managerDatabase.AddTextParameter cmd, "p_uuid", transactionUUID, 36
+    managerDatabase.AddTextParameter cmd, "p_order_uuid", orderUUID, 36
+    managerDatabase.AddDateParameter cmd, "p_arrival_date", DateValue(receiveItem.ArrivalDate)
+    managerDatabase.AddDateParameter cmd, "p_verification_date", verificationDate
+    managerDatabase.AddLongParameter cmd, "p_received_quantity", receiveItem.ReceivedQuantity
+    managerDatabase.AddLongParameter cmd, "p_ok_quantity", receiveItem.OkQuantity
+    managerDatabase.AddLongParameter cmd, "p_not_ok_quantity", receiveItem.NotOkQuantity
+    managerDatabase.AddNullableLongTextParameter cmd, "p_remarks", receiveItem.Remarks
+    managerDatabase.AddNullableLongTextParameter cmd, "p_system_remarks", receiveItem.SystemRemarks
+    managerDatabase.AddNullableTextParameter cmd, "p_person_in_charge", receiveItem.PersonInCharge, 255
 
     CreateReceive = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
 
-' select_receive_by_manufacturing_plant_name_and_arrival_date
-' Returns Receive objects keyed by receive transaction UUID.
-Public Function SelectReceives( _
+' receive_list
+' Active, not deleted receives of one plant with an arrival
+' date between fromDate and toDate (whole days), keyed by
+' UUID, in arrival date order. page: filter and page
+' (Nothing = every row).
+Public Function ListReceives( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String, _
+    ByVal plantItem As ManufacturingPlant, _
     ByVal fromDate As Date, _
-    ByVal untilDate As Date) As Collection
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Collection
 
     Dim cmd As ADODB.Command
     Dim rs As ADODB.recordset
-
     Dim receives As Collection
     Dim receiveItem As Receive
-    Dim orderItem As Order
-    Dim plantItem As Plant
-    Dim catalogueItem As Catalogue
-    Dim vendorItem As Vendor
 
-    Dim poIdValue As String
+    If page Is Nothing Then Set page = New PageRequest
 
-    Set cmd = managerDatabase.CreateCommand(conn, _
-        "select_receive_by_manufacturing_plant_name_and_arrival_date")
+    Set cmd = managerDatabase.CreateCommand(conn, "receive_list")
 
-    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
-    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
+    AddCriteria cmd, plantItem, fromDate, toDate
+    managerDatabase.AddPageFilterParameters cmd, page
+    managerDatabase.AddPageDateKeyParameters cmd, page
 
     Set rs = managerDatabase.ExecuteRecordset(cmd)
+    managerDatabase.MoveToPageStart rs, page
 
     Set receives = New Collection
 
     Do While Not rs.EOF
 
-        Set plantItem = New Plant
-        Set catalogueItem = New Catalogue
-        Set vendorItem = New Vendor
-        Set orderItem = New Order
-        Set receiveItem = New Receive
+        If managerDatabase.IsPageFull(receives.Count, page) Then Exit Do
 
-        ' -------------------------------------------------
-        ' Plant object
-        ' -------------------------------------------------
-        plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
-
-        ' -------------------------------------------------
-        ' Catalogue object
-        ' -------------------------------------------------
-        catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
-        catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
-
-        ' -------------------------------------------------
-        ' Vendor object
-        ' -------------------------------------------------
-        vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
-
-        ' -------------------------------------------------
-        ' Order object
-        ' -------------------------------------------------
-        orderItem.Id = managerDatabase.FieldLong(rs, "order_id")
-        orderItem.UUID = managerDatabase.FieldText(rs, "order_uuid")
-
-        poIdValue = managerDatabase.FieldText(rs, "order_poid")
-        If Len(poIdValue) > 0 Then
-            orderItem.poID = poIdValue
-        End If
-
-        Set orderItem.Plant = plantItem
-        Set orderItem.Catalogue = catalogueItem
-        Set orderItem.Vendor = vendorItem
-
-        orderItem.orderDate = managerDatabase.FieldDate(rs, "order_date")
-        orderItem.Amount = managerDatabase.FieldDouble(rs, "order_amount")
-        orderItem.remarks = managerDatabase.FieldText(rs, "order_remarks")
-
-        ' -------------------------------------------------
-        ' Receive object
-        ' -------------------------------------------------
-        receiveItem.Id = managerDatabase.FieldLong(rs, "receive_id")
-        receiveItem.UUID = managerDatabase.FieldText(rs, "transaction_uuid")
-
-        Set receiveItem.Order = orderItem
-
-        receiveItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
-        receiveItem.RemainingOrder = managerDatabase.FieldDouble(rs, "total_remaining_order")
-        receiveItem.totalReceiveAmount = managerDatabase.FieldDouble(rs, "total_receive_amount")
-        receiveItem.okAmount = managerDatabase.FieldDouble(rs, "total_ok_amount")
-        receiveItem.notOKAmount = managerDatabase.FieldDouble(rs, "total_not_ok_amount")
-
-        If Not managerDatabase.FieldIsNull(rs, "receive_arrival_date") Then
-            receiveItem.ArrivalDate = managerDatabase.FieldDate(rs, "receive_arrival_date")
-        End If
-
-        If Not managerDatabase.FieldIsNull(rs, "receive_verification_date") Then
-            receiveItem.VerificationDate = managerDatabase.FieldDate(rs, "receive_verification_date")
-        End If
-
-        receiveItem.remarks = managerDatabase.FieldText(rs, "receive_remarks")
-        receiveItem.SystemRemarks = managerDatabase.FieldText(rs, "receive_system_remarks")
-        receiveItem.personInCharge = managerDatabase.FieldText(rs, "receive_person_in_charge")
-
-        ' Transaction UUID should be unique for each receive.
-        receives.Add _
-            item:=receiveItem, _
-            Key:=receiveItem.UUID
-
-        Set receiveItem = Nothing
-        Set orderItem = Nothing
-        Set plantItem = Nothing
-        Set catalogueItem = Nothing
-        Set vendorItem = Nothing
+        Set receiveItem = MapReceive(rs, plantItem)
+        receives.Add receiveItem, receiveItem.UUID
 
         rs.MoveNext
+
     Loop
 
     managerDatabase.CloseRecordset rs
 
-    Set SelectReceives = receives
+    Set ListReceives = receives
 
 End Function
 
 
-' select_pending_order_by_manufacturing_plant_name_and_order_date
-' Returns Receive objects (Order + remaining order amount)
-' keyed by order UUID.
-Public Function SelectPendingOrderReceive( _
+' receive_reassign_order
+' Moves every receive (active and draft) of the old order to
+' the new order. Returns the number of receives moved
+' (0 is valid).
+Public Function ReassignOrder( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String, _
-    ByVal fromDate As Date, _
-    ByVal untilDate As Date) As Collection
+    ByVal oldOrderUUID As String, _
+    ByVal newOrderUUID As String) As Long
 
     Dim cmd As ADODB.Command
-    Dim rs As ADODB.recordset
 
-    Dim receives As Collection
-    Dim orderItem As Order
+    Set cmd = managerDatabase.CreateCommand(conn, "receive_reassign_order")
+
+    managerDatabase.AddTextParameter cmd, "p_old_order_uuid", oldOrderUUID, 36
+    managerDatabase.AddTextParameter cmd, "p_new_order_uuid", newOrderUUID, 36
+
+    ReassignOrder = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' receive_list_count
+' Number of rows ListReceives returns over all pages.
+Public Function CountReceives( _
+    ByVal conn As ADODB.connection, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date, _
+    Optional ByVal page As PageRequest = Nothing) As Long
+
+    Dim cmd As ADODB.Command
+
+    If page Is Nothing Then Set page = New PageRequest
+
+    Set cmd = managerDatabase.CreateCommand(conn, "receive_list_count")
+
+    AddCriteria cmd, plantItem, fromDate, toDate
+    managerDatabase.AddPageFilterParameters cmd, page
+
+    CountReceives = managerDatabase.ExecuteCount(cmd)
+
+End Function
+
+
+' =========================================================
+' INTERNAL
+' =========================================================
+
+Private Sub AddCriteria( _
+    ByVal cmd As ADODB.Command, _
+    ByVal plantItem As ManufacturingPlant, _
+    ByVal fromDate As Date, _
+    ByVal toDate As Date)
+
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", plantItem.Id
+    managerDatabase.AddDateParameter cmd, "p_date_from", DateValue(fromDate)
+    managerDatabase.AddDateParameter cmd, "p_date_to", DateValue(toDate)
+
+End Sub
+
+
+Private Function MapReceive( _
+    ByVal rs As ADODB.recordset, _
+    ByVal plantItem As ManufacturingPlant) As Receive
+
     Dim receiveItem As Receive
-    Dim plantItem As Plant
-    Dim catalogueItem As Catalogue
+    Dim receiveHeader As Transaction
+    Dim orderHeader As Transaction
+    Dim orderItem As Order
+    Dim sparepartItem As Sparepart
     Dim vendorItem As Vendor
+    Dim textValue As String
 
-    Dim poIdValue As String
+    ' ---- order ------------------------------------------
+    Set orderHeader = New Transaction
+    orderHeader.UUID = managerDatabase.FieldText(rs, "order_uuid")
+    orderHeader.TransactionType = "ORDER"
+    Set orderHeader.ManufacturingPlant = plantItem
 
-    Set cmd = managerDatabase.CreateCommand(conn, _
-        "select_pending_order_by_manufacturing_plant_name_and_order_date")
+    Set sparepartItem = New Sparepart
+    sparepartItem.Id = managerDatabase.FieldLong(rs, "sparepart_id")
+    sparepartItem.Code = managerDatabase.FieldText(rs, "sparepart_code")
+    sparepartItem.Name = managerDatabase.FieldText(rs, "sparepart_name")
+    sparepartItem.UnitOfMeasurement = managerDatabase.FieldText(rs, "sparepart_unit_of_measurement")
 
-    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    managerDatabase.AddDateParameter cmd, "p_from_date", fromDate
-    managerDatabase.AddDateParameter cmd, "p_until_date", untilDate
+    Set orderItem = New Order
 
-    Set rs = managerDatabase.ExecuteRecordset(cmd)
+    With orderItem
+        .Id = managerDatabase.FieldLong(rs, "order_id")
+        Set .Transaction = orderHeader
+        Set .Sparepart = sparepartItem
 
-    Set receives = New Collection
-
-    Do While Not rs.EOF
-
-        Set plantItem = New Plant
-        Set catalogueItem = New Catalogue
-        Set vendorItem = New Vendor
-        Set orderItem = New Order
-        Set receiveItem = New Receive
-
-        plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
-
-        catalogueItem.Name = managerDatabase.FieldText(rs, "catalogue_name")
-        catalogueItem.unitOfMeasurement = managerDatabase.FieldText(rs, "catalogue_unit_of_measurement")
-
-        vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
-
-        orderItem.Id = managerDatabase.FieldLong(rs, "order_id")
-        orderItem.UUID = managerDatabase.FieldText(rs, "order_uuid")
-
-        poIdValue = managerDatabase.FieldText(rs, "order_poid")
-        If Len(poIdValue) > 0 Then
-            orderItem.poID = poIdValue
+        If Not managerDatabase.FieldIsNull(rs, "vendor_id") Then
+            Set vendorItem = New Vendor
+            vendorItem.Id = managerDatabase.FieldLong(rs, "vendor_id")
+            vendorItem.Name = managerDatabase.FieldText(rs, "vendor_name")
+            textValue = managerDatabase.FieldText(rs, "vendor_code")
+            If Len(textValue) > 0 Then vendorItem.Code = textValue
+            Set .Vendor = vendorItem
         End If
 
-        Set orderItem.Plant = plantItem
-        orderItem.orderDate = managerDatabase.FieldDate(rs, "order_date")
-        Set orderItem.Catalogue = catalogueItem
-        orderItem.Amount = managerDatabase.FieldDouble(rs, "order_amount")
-        orderItem.Status = managerDatabase.FieldText(rs, "order_status")
-        Set orderItem.Vendor = vendorItem
-        orderItem.remarks = managerDatabase.FieldText(rs, "order_remarks")
-        orderItem.personInCharge = managerDatabase.FieldText(rs, "order_person_in_charge")
+        .PoNumber = managerDatabase.FieldText(rs, "order_po_number")
+        .OrderDate = managerDatabase.FieldDate(rs, "order_date")
+        .Quantity = managerDatabase.FieldLong(rs, "order_quantity")
+        .Remarks = managerDatabase.FieldText(rs, "order_remarks")
+    End With
 
-        Set receiveItem.Order = orderItem
-        receiveItem.RemainingOrder = managerDatabase.FieldDouble(rs, "remaining_order_amount")
+    ' ---- receive ----------------------------------------
+    Set receiveHeader = New Transaction
+    receiveHeader.UUID = managerDatabase.FieldText(rs, "uuid")
+    receiveHeader.TransactionType = "RECEIVE"
+    Set receiveHeader.ManufacturingPlant = plantItem
+    receiveHeader.ActivatedAt = managerDatabase.FieldDate(rs, "activated_at")
 
-        receives.Add _
-            item:=receiveItem, _
-            Key:=orderItem.UUID
+    Set receiveItem = New Receive
 
-        Set receiveItem = Nothing
-        Set orderItem = Nothing
-        Set plantItem = Nothing
-        Set catalogueItem = Nothing
-        Set vendorItem = Nothing
+    With receiveItem
+        .Id = managerDatabase.FieldLong(rs, "id")
+        Set .Transaction = receiveHeader
+        Set .Order = orderItem
 
-        rs.MoveNext
-    Loop
+        .ArrivalDate = managerDatabase.FieldDate(rs, "arrival_date")
+        .VerificationDate = managerDatabase.FieldDate(rs, "verification_date")
 
-    managerDatabase.CloseRecordset rs
+        ' Received first: OK + NOT OK may not exceed it.
+        .ReceivedQuantity = managerDatabase.FieldLong(rs, "received_quantity")
+        .OkQuantity = managerDatabase.FieldLong(rs, "ok_quantity")
+        .NotOkQuantity = managerDatabase.FieldLong(rs, "not_ok_quantity")
 
-    Set SelectPendingOrderReceive = receives
+        .Remarks = managerDatabase.FieldText(rs, "remarks")
+        .SystemRemarks = managerDatabase.FieldText(rs, "system_remarks")
+
+        textValue = managerDatabase.FieldText(rs, "person_in_charge")
+        If Len(textValue) > 0 Then .PersonInCharge = textValue
+
+        .RemainingQuantityBefore = managerDatabase.FieldLong(rs, "remaining_quantity_before")
+    End With
+
+    Set MapReceive = receiveItem
 
 End Function

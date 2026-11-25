@@ -28,13 +28,17 @@ Public Sub ApplyQueries()
     Query_vw_receive_active
     Query_vw_order_receive_total
     Query_vw_order_progress
+    Query_vw_order_list
     Query_vw_receive_running_total
+    Query_vw_receive_list
+    Query_vw_request_list
     Query_vw_stock_ledger
     Query_activity_log_create
     Query_manufacturing_plant_archive
     Query_manufacturing_plant_create
     Query_manufacturing_plant_list
     Query_manufacturing_plant_stock_adjust_current_stock
+    Query_manufacturing_plant_stock_count
     Query_manufacturing_plant_stock_create_missing
     Query_manufacturing_plant_stock_list
     Query_manufacturing_plant_stock_recalculate_reorder_point
@@ -47,20 +51,26 @@ Public Sub ApplyQueries()
     Query_mobile_maintenance_update
     Query_order_create
     Query_order_list
+    Query_order_list_count
     Query_order_list_pending
+    Query_order_list_pending_count
     Query_order_set_po_number
     Query_receive_create
     Query_receive_list
+    Query_receive_list_count
     Query_receive_reassign_order
     Query_request_create
     Query_request_list
+    Query_request_list_count
     Query_sparepart_archive
     Query_sparepart_create
     Query_sparepart_find_by_name
     Query_sparepart_list
     Query_sparepart_update
+    Query_stock_ledger_count_by_month
     Query_stock_ledger_get_available
     Query_stock_ledger_get_balance
+    Query_stock_ledger_get_balance_before
     Query_stock_ledger_list_by_month
     Query_transaction_activate
     Query_transaction_create
@@ -228,6 +238,80 @@ Public Sub Query_vw_order_progress()
 End Sub
 
 '----------------------------------------------------------------------
+' vw_order_list.sql
+' View    : vw_order_list
+' Purpose : Active orders with everything the order recaps show and
+'           search: sparepart / vendor as "code - name", dates and
+'           numbers as text, and search_text (all searchable columns
+'           in one text) for the list filters.
+'           estimated_arrival = order_date + lead_time_days of the
+'           plant stock row (Null when the lead time is 0).
+' Used by : order_list, order_list_count, order_list_pending,
+'           order_list_pending_count
+'----------------------------------------------------------------------
+' Uses    : vw_order_progress
+Public Sub Query_vw_order_list()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    o.id AS id," & vbCrLf
+    sql = sql & "    o.uuid AS uuid," & vbCrLf
+    sql = sql & "    o.manufacturing_plant_id AS manufacturing_plant_id," & vbCrLf
+    sql = sql & "    o.po_number AS po_number," & vbCrLf
+    sql = sql & "    o.order_date AS order_date," & vbCrLf
+    sql = sql & "    o.quantity AS quantity," & vbCrLf
+    sql = sql & "    o.ok_quantity_total AS ok_quantity_total," & vbCrLf
+    sql = sql & "    o.received_quantity_total AS received_quantity_total," & vbCrLf
+    sql = sql & "    o.remaining_quantity AS remaining_quantity," & vbCrLf
+    sql = sql & "    o.status AS [status]," & vbCrLf
+    sql = sql & "    o.remarks AS remarks," & vbCrLf
+    sql = sql & "    o.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    o.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    o.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    IIf(" & vbCrLf
+    sql = sql & "        ps.lead_time_days > 0," & vbCrLf
+    sql = sql & "        DateAdd('d', ps.lead_time_days, o.order_date)," & vbCrLf
+    sql = sql & "        Null" & vbCrLf
+    sql = sql & "    ) AS estimated_arrival," & vbCrLf
+    sql = sql & "    s.id AS sparepart_id," & vbCrLf
+    sql = sql & "    s.code AS sparepart_code," & vbCrLf
+    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
+    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    v.id AS vendor_id," & vbCrLf
+    sql = sql & "    v.code AS vendor_code," & vbCrLf
+    sql = sql & "    v.[name] AS vendor_name," & vbCrLf
+    sql = sql & "    p.[name] AS manufacturing_plant_name," & vbCrLf
+    sql = sql & "    s.code & ' - ' & s.[name] AS sparepart_display," & vbCrLf
+    sql = sql & "    IIf(v.id IS NULL, Null, v.code & ' - ' & v.[name]) AS vendor_display," & vbCrLf
+    sql = sql & "    CStr(o.quantity) AS quantity_text," & vbCrLf
+    sql = sql & "    CStr(o.ok_quantity_total) AS ok_quantity_text," & vbCrLf
+    sql = sql & "    CStr(o.remaining_quantity) AS remaining_quantity_text," & vbCrLf
+    sql = sql & "    Format(o.order_date, 'dd-mmm-yyyy') AS order_date_text," & vbCrLf
+    sql = sql & "    IIf(" & vbCrLf
+    sql = sql & "        ps.lead_time_days > 0," & vbCrLf
+    sql = sql & "        Format(DateAdd('d', ps.lead_time_days, o.order_date), 'dd-mmm-yyyy')," & vbCrLf
+    sql = sql & "        Null" & vbCrLf
+    sql = sql & "    ) AS estimated_arrival_text," & vbCrLf
+    sql = sql & "    o.uuid & '|' & o.po_number & '|' & s.code & ' - ' & s.[name]" & vbCrLf
+    sql = sql & "        & '|' & v.code & ' - ' & v.[name] & '|' & o.status" & vbCrLf
+    sql = sql & "        & '|' & o.remarks & '|' & o.person_in_charge AS search_text" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    (((vw_order_progress AS o" & vbCrLf
+    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
+    sql = sql & "            ON s.id = o.sparepart_id)" & vbCrLf
+    sql = sql & "        INNER JOIN manufacturing_plants AS p" & vbCrLf
+    sql = sql & "            ON p.id = o.manufacturing_plant_id)" & vbCrLf
+    sql = sql & "        LEFT JOIN vendors AS v" & vbCrLf
+    sql = sql & "            ON v.id = o.vendor_id)" & vbCrLf
+    sql = sql & "        LEFT JOIN manufacturing_plant_stocks AS ps" & vbCrLf
+    sql = sql & "            ON (ps.manufacturing_plant_id = o.manufacturing_plant_id" & vbCrLf
+    sql = sql & "                AND ps.sparepart_id = o.sparepart_id);" & vbCrLf
+
+    SaveQuery "vw_order_list", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' vw_receive_running_total.sql
 ' Query   : vw_receive_running_total
 ' Type    : SELECT (view - no parameters, used by other queries)
@@ -271,6 +355,130 @@ Public Sub Query_vw_receive_running_total()
     sql = sql & "    r.id;" & vbCrLf
 
     SaveQuery "vw_receive_running_total", sql
+End Sub
+
+'----------------------------------------------------------------------
+' vw_receive_list.sql
+' View    : vw_receive_list
+' Purpose : Active receives with their order and everything the
+'           receive recap shows and searches (texts for the filter,
+'           search_text). remaining_quantity_before = order quantity
+'           minus the OK quantity of the receives before this one
+'           (never below 0).
+' Used by : receive_list, receive_list_count
+'----------------------------------------------------------------------
+' Uses    : vw_order_progress, vw_receive_active, vw_receive_running_total
+Public Sub Query_vw_receive_list()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    r.id AS id," & vbCrLf
+    sql = sql & "    r.uuid AS uuid," & vbCrLf
+    sql = sql & "    r.manufacturing_plant_id AS manufacturing_plant_id," & vbCrLf
+    sql = sql & "    r.arrival_date AS arrival_date," & vbCrLf
+    sql = sql & "    r.verification_date AS verification_date," & vbCrLf
+    sql = sql & "    r.received_quantity AS received_quantity," & vbCrLf
+    sql = sql & "    r.ok_quantity AS ok_quantity," & vbCrLf
+    sql = sql & "    r.not_ok_quantity AS not_ok_quantity," & vbCrLf
+    sql = sql & "    r.remarks AS remarks," & vbCrLf
+    sql = sql & "    r.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    r.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    r.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    IIf(" & vbCrLf
+    sql = sql & "        o.quantity - rr.earlier_ok_quantity < 0," & vbCrLf
+    sql = sql & "        0," & vbCrLf
+    sql = sql & "        o.quantity - rr.earlier_ok_quantity" & vbCrLf
+    sql = sql & "    ) AS remaining_quantity_before," & vbCrLf
+    sql = sql & "    o.id AS order_id," & vbCrLf
+    sql = sql & "    o.uuid AS order_uuid," & vbCrLf
+    sql = sql & "    o.po_number AS order_po_number," & vbCrLf
+    sql = sql & "    o.order_date AS order_date," & vbCrLf
+    sql = sql & "    o.quantity AS order_quantity," & vbCrLf
+    sql = sql & "    o.remarks AS order_remarks," & vbCrLf
+    sql = sql & "    s.id AS sparepart_id," & vbCrLf
+    sql = sql & "    s.code AS sparepart_code," & vbCrLf
+    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
+    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    v.id AS vendor_id," & vbCrLf
+    sql = sql & "    v.code AS vendor_code," & vbCrLf
+    sql = sql & "    v.[name] AS vendor_name," & vbCrLf
+    sql = sql & "    p.[name] AS manufacturing_plant_name," & vbCrLf
+    sql = sql & "    s.code & ' - ' & s.[name] AS sparepart_display," & vbCrLf
+    sql = sql & "    Format(o.order_date, 'dd-mmm-yyyy') AS order_date_text," & vbCrLf
+    sql = sql & "    Format(r.arrival_date, 'dd-mmm-yyyy') AS arrival_date_text," & vbCrLf
+    sql = sql & "    Format(r.verification_date, 'dd-mmm-yyyy') AS verification_date_text," & vbCrLf
+    sql = sql & "    CStr(IIf(" & vbCrLf
+    sql = sql & "        o.quantity - rr.earlier_ok_quantity < 0," & vbCrLf
+    sql = sql & "        0," & vbCrLf
+    sql = sql & "        o.quantity - rr.earlier_ok_quantity" & vbCrLf
+    sql = sql & "    )) AS remaining_quantity_before_text," & vbCrLf
+    sql = sql & "    CStr(r.received_quantity) AS received_quantity_text," & vbCrLf
+    sql = sql & "    CStr(r.ok_quantity) AS ok_quantity_text," & vbCrLf
+    sql = sql & "    CStr(r.not_ok_quantity) AS not_ok_quantity_text," & vbCrLf
+    sql = sql & "    o.uuid & '|' & r.uuid & '|' & o.po_number & '|' & s.code & ' - ' & s.[name]" & vbCrLf
+    sql = sql & "        & '|' & r.remarks & '|' & r.person_in_charge AS search_text" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    ((((vw_receive_active AS r" & vbCrLf
+    sql = sql & "        INNER JOIN vw_receive_running_total AS rr" & vbCrLf
+    sql = sql & "            ON rr.id = r.id)" & vbCrLf
+    sql = sql & "        INNER JOIN vw_order_progress AS o" & vbCrLf
+    sql = sql & "            ON o.id = r.order_id)" & vbCrLf
+    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
+    sql = sql & "            ON s.id = o.sparepart_id)" & vbCrLf
+    sql = sql & "        INNER JOIN manufacturing_plants AS p" & vbCrLf
+    sql = sql & "            ON p.id = r.manufacturing_plant_id)" & vbCrLf
+    sql = sql & "        LEFT JOIN vendors AS v" & vbCrLf
+    sql = sql & "            ON v.id = o.vendor_id;" & vbCrLf
+
+    SaveQuery "vw_receive_list", sql
+End Sub
+
+'----------------------------------------------------------------------
+' vw_request_list.sql
+' View    : vw_request_list
+' Purpose : Active requests with everything the request recap shows
+'           and searches (texts for the filter, search_text).
+' Used by : request_list, request_list_count
+'----------------------------------------------------------------------
+' Uses    : vw_transaction_active
+Public Sub Query_vw_request_list()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    rq.id AS id," & vbCrLf
+    sql = sql & "    t.uuid AS uuid," & vbCrLf
+    sql = sql & "    t.manufacturing_plant_id AS manufacturing_plant_id," & vbCrLf
+    sql = sql & "    rq.request_date AS request_date," & vbCrLf
+    sql = sql & "    rq.quantity AS quantity," & vbCrLf
+    sql = sql & "    rq.remarks AS remarks," & vbCrLf
+    sql = sql & "    rq.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    rq.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    t.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    s.id AS sparepart_id," & vbCrLf
+    sql = sql & "    s.code AS sparepart_code," & vbCrLf
+    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
+    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    mm.id AS mobile_maintenance_id," & vbCrLf
+    sql = sql & "    mm.code AS mobile_maintenance_code," & vbCrLf
+    sql = sql & "    mm.[name] AS mobile_maintenance_name," & vbCrLf
+    sql = sql & "    s.code & ' - ' & s.[name] AS sparepart_display," & vbCrLf
+    sql = sql & "    mm.code & ' - ' & mm.[name] AS mobile_maintenance_display," & vbCrLf
+    sql = sql & "    CStr(rq.quantity) AS quantity_text," & vbCrLf
+    sql = sql & "    Format(rq.request_date, 'dd-mmm-yyyy') AS request_date_text," & vbCrLf
+    sql = sql & "    t.uuid & '|' & s.code & ' - ' & s.[name] & '|' & mm.code & ' - ' & mm.[name]" & vbCrLf
+    sql = sql & "        & '|' & rq.remarks & '|' & rq.person_in_charge AS search_text" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    ((requests AS rq" & vbCrLf
+    sql = sql & "        INNER JOIN vw_transaction_active AS t" & vbCrLf
+    sql = sql & "            ON t.id = rq.transaction_id)" & vbCrLf
+    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
+    sql = sql & "            ON s.id = rq.sparepart_id)" & vbCrLf
+    sql = sql & "        INNER JOIN mobile_maintenances AS mm" & vbCrLf
+    sql = sql & "            ON mm.id = rq.mobile_maintenance_id;" & vbCrLf
+
+    SaveQuery "vw_request_list", sql
 End Sub
 
 '----------------------------------------------------------------------
@@ -506,6 +714,37 @@ Public Sub Query_manufacturing_plant_stock_adjust_current_stock()
 End Sub
 
 '----------------------------------------------------------------------
+' manufacturing_plant_stock_count.sql
+' Query   : manufacturing_plant_stock_count
+' Type    : SELECT (one row)
+' Purpose : Number of rows manufacturing_plant_stock_list returns over
+'           all its pages.
+'----------------------------------------------------------------------
+Public Sub Query_manufacturing_plant_stock_count()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    manufacturing_plant_stocks AS ps" & vbCrLf
+    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
+    sql = sql & "            ON s.id = ps.sparepart_id" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    ps.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND s.deleted_at IS NULL" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1, s.code & ' - ' & s.[name] & '|' & s.alias, [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "manufacturing_plant_stock_count", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' manufacturing_plant_stock_create_missing.sql
 ' Query   : manufacturing_plant_stock_create_missing
 ' Type    : APPEND
@@ -554,9 +793,16 @@ End Sub
 '----------------------------------------------------------------------
 ' manufacturing_plant_stock_list.sql
 ' Query   : manufacturing_plant_stock_list
-' Type    : SELECT
-' Purpose : Stock and ROP planning figures of every catalogue
-'           sparepart in a plant.
+' Type    : SELECT (one page)
+' Purpose : Stock and ROP planning figures of the catalogue spareparts
+'           in a plant (REKAP INVENTORY, dashboard, stock checks).
+' Filter  : p_filter_value searched (contains, ignoring case) in
+'           "code - name" and alias; blank = no filter.
+' Paging  : keyset, sorted by (sparepart name, stock row id).
+'           p_direction 'NEXT' = rows after  (p_key_text, p_key_id)
+'           p_direction 'PREV' = rows before (p_key_text, p_key_id)
+'           First page: 'NEXT' from ('', 0).
+'           Total rows: manufacturing_plant_stock_count.
 ' Replaces: select_plant_stocks
 '----------------------------------------------------------------------
 Public Sub Query_manufacturing_plant_stock_list()
@@ -564,8 +810,11 @@ Public Sub Query_manufacturing_plant_stock_list()
 
     sql = ""
     sql = sql & "PARAMETERS" & vbCrLf
-    sql = sql & "    [p_manufacturing_plant_id] Long;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255)," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_text] Text(255)," & vbCrLf
+    sql = sql & "    [p_key_id] Long;" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
     sql = sql & "    ps.id AS id," & vbCrLf
     sql = sql & "    ps.current_stock AS current_stock," & vbCrLf
@@ -591,8 +840,20 @@ Public Sub Query_manufacturing_plant_stock_list()
     sql = sql & "WHERE" & vbCrLf
     sql = sql & "    ps.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
     sql = sql & "    AND s.deleted_at IS NULL" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1, s.code & ' - ' & s.[name] & '|' & s.alias, [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    )" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        s.[name] < [p_key_text]" & vbCrLf
+    sql = sql & "            OR (s.[name] = [p_key_text] AND ps.id < [p_key_id])," & vbCrLf
+    sql = sql & "        s.[name] > [p_key_text]" & vbCrLf
+    sql = sql & "            OR (s.[name] = [p_key_text] AND ps.id > [p_key_id])" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
-    sql = sql & "    s.[name];" & vbCrLf
+    sql = sql & "    s.[name]," & vbCrLf
+    sql = sql & "    ps.id;" & vbCrLf
 
     SaveQuery "manufacturing_plant_stock_list", sql
 End Sub
@@ -971,12 +1232,25 @@ End Sub
 '----------------------------------------------------------------------
 ' order_list.sql
 ' Query   : order_list
-' Type    : SELECT
-' Purpose : Active orders of a plant dated p_date_from .. p_date_to
-'           (whole days, both inclusive), with receive progress.
-' Replaces: select_order_receive_by_manufacturing_plant_name_and_order_date
+' Type    : SELECT (one page)
+' Purpose : Active, not deleted (quantity > 0) orders of a plant with
+'           an order date p_date_from .. p_date_to (whole days, both
+'           inclusive), one page at a time (REKAP ORDER).
+' Filter  : p_filter_value is searched (contains, ignoring case) in
+'           the column number p_filter_index (list below); 0 = every
+'           column (search_text); blank value = no filter.
+' Paging  : keyset. p_direction 'NEXT' = rows after (p_key_date,
+'           p_key_id), 'PREV' = rows before it; first page = 'NEXT'
+'           from (1900-01-01, 0). The DAO reads the first page-size
+'           rows (NEXT) or the last ones (PREV) of the result.
+'           Columns for p_filter_index:
+'           1 uuid, 2 po_number, 3 sparepart (code - name),
+'           4 quantity, 5 unit, 6 vendor (code - name), 7 order date,
+'           8 estimated arrival, 9 status, 10 remarks,
+'           11 person in charge, 12 OK received, 13 remaining.
+'           Sorted by (order_date, id). Total rows: order_list_count.
 '----------------------------------------------------------------------
-' Uses    : vw_order_progress
+' Uses    : vw_order_list
 Public Sub Query_order_list()
     Dim sql As String
 
@@ -984,56 +1258,150 @@ Public Sub Query_order_list()
     sql = sql & "PARAMETERS" & vbCrLf
     sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
     sql = sql & "    [p_date_from] DateTime," & vbCrLf
-    sql = sql & "    [p_date_to] DateTime;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255)," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_id] Long;" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    o.id AS id," & vbCrLf
-    sql = sql & "    o.uuid AS uuid," & vbCrLf
-    sql = sql & "    o.po_number AS po_number," & vbCrLf
-    sql = sql & "    o.order_date AS order_date," & vbCrLf
-    sql = sql & "    o.quantity AS quantity," & vbCrLf
-    sql = sql & "    o.ok_quantity_total AS ok_quantity_total," & vbCrLf
-    sql = sql & "    o.received_quantity_total AS received_quantity_total," & vbCrLf
-    sql = sql & "    o.remaining_quantity AS remaining_quantity," & vbCrLf
-    sql = sql & "    o.status AS [status]," & vbCrLf
-    sql = sql & "    o.remarks AS remarks," & vbCrLf
-    sql = sql & "    o.system_remarks AS system_remarks," & vbCrLf
-    sql = sql & "    o.person_in_charge AS person_in_charge," & vbCrLf
-    sql = sql & "    o.activated_at AS activated_at," & vbCrLf
-    sql = sql & "    s.id AS sparepart_id," & vbCrLf
-    sql = sql & "    s.code AS sparepart_code," & vbCrLf
-    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
-    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
-    sql = sql & "    v.id AS vendor_id," & vbCrLf
-    sql = sql & "    v.[name] AS vendor_name," & vbCrLf
-    sql = sql & "    p.[name] AS manufacturing_plant_name" & vbCrLf
+    sql = sql & "    l.id AS id," & vbCrLf
+    sql = sql & "    l.uuid AS uuid," & vbCrLf
+    sql = sql & "    l.po_number AS po_number," & vbCrLf
+    sql = sql & "    l.order_date AS order_date," & vbCrLf
+    sql = sql & "    l.quantity AS quantity," & vbCrLf
+    sql = sql & "    l.ok_quantity_total AS ok_quantity_total," & vbCrLf
+    sql = sql & "    l.received_quantity_total AS received_quantity_total," & vbCrLf
+    sql = sql & "    l.remaining_quantity AS remaining_quantity," & vbCrLf
+    sql = sql & "    l.status AS [status]," & vbCrLf
+    sql = sql & "    l.remarks AS remarks," & vbCrLf
+    sql = sql & "    l.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    l.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    l.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    l.estimated_arrival AS estimated_arrival," & vbCrLf
+    sql = sql & "    l.sparepart_id AS sparepart_id," & vbCrLf
+    sql = sql & "    l.sparepart_code AS sparepart_code," & vbCrLf
+    sql = sql & "    l.sparepart_name AS sparepart_name," & vbCrLf
+    sql = sql & "    l.sparepart_unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    l.vendor_id AS vendor_id," & vbCrLf
+    sql = sql & "    l.vendor_code AS vendor_code," & vbCrLf
+    sql = sql & "    l.vendor_name AS vendor_name," & vbCrLf
+    sql = sql & "    l.manufacturing_plant_name AS manufacturing_plant_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
-    sql = sql & "    ((vw_order_progress AS o" & vbCrLf
-    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
-    sql = sql & "            ON s.id = o.sparepart_id)" & vbCrLf
-    sql = sql & "        INNER JOIN manufacturing_plants AS p" & vbCrLf
-    sql = sql & "            ON p.id = o.manufacturing_plant_id)" & vbCrLf
-    sql = sql & "        LEFT JOIN vendors AS v" & vbCrLf
-    sql = sql & "            ON v.id = o.vendor_id" & vbCrLf
+    sql = sql & "    vw_order_list AS l" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
-    sql = sql & "    o.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
-    sql = sql & "    AND o.order_date >= [p_date_from]" & vbCrLf
-    sql = sql & "    AND o.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.order_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.vendor_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.estimated_arrival_text," & vbCrLf
+    sql = sql & "                    l.status," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_text))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    )" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        l.order_date < [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.order_date = [p_key_date] AND l.id < [p_key_id])," & vbCrLf
+    sql = sql & "        l.order_date > [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.order_date = [p_key_date] AND l.id > [p_key_id])" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
-    sql = sql & "    o.order_date," & vbCrLf
-    sql = sql & "    o.id;" & vbCrLf
+    sql = sql & "    l.order_date," & vbCrLf
+    sql = sql & "    l.id;" & vbCrLf
 
     SaveQuery "order_list", sql
 End Sub
 
 '----------------------------------------------------------------------
+' order_list_count.sql
+' Query   : order_list_count
+' Type    : SELECT (one row)
+' Purpose : Number of rows order_list returns over all its pages (same
+'           plant, date range and filter): BARIS DATA / TOTAL HALAMAN.
+'----------------------------------------------------------------------
+' Uses    : vw_order_list
+Public Sub Query_order_list_count()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_date_from] DateTime," & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_order_list AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.order_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.vendor_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.estimated_arrival_text," & vbCrLf
+    sql = sql & "                    l.status," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_text))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "order_list_count", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' order_list_pending.sql
 ' Query   : order_list_pending
-' Type    : SELECT
-' Purpose : Same as order_list, only orders with a remaining quantity.
-' Replaces: select_pending_order_by_manufacturing_plant_name_and_order_date
+' Type    : SELECT (one page)
+' Purpose : Same as order_list, only orders with a remaining quantity
+'           (REKAP PENDING ORDER, INPUT PENERIMAAN).
+' Filter  : p_filter_value is searched (contains, ignoring case) in
+'           the column number p_filter_index (list below); 0 = every
+'           column (search_text); blank value = no filter.
+' Paging  : keyset. p_direction 'NEXT' = rows after (p_key_date,
+'           p_key_id), 'PREV' = rows before it; first page = 'NEXT'
+'           from (1900-01-01, 0). The DAO reads the first page-size
+'           rows (NEXT) or the last ones (PREV) of the result.
+'           Columns for p_filter_index:
+'           1 uuid, 2 po_number, 3 sparepart (code - name),
+'           4 quantity, 5 unit, 6 vendor (code - name), 7 order date,
+'           8 estimated arrival, 9 status, 10 remarks,
+'           11 person in charge, 12 OK received, 13 remaining.
+'           Sorted by (order_date, id). Total rows: order_list_pending_count.
 '----------------------------------------------------------------------
-' Uses    : vw_order_progress
+' Uses    : vw_order_list
 Public Sub Query_order_list_pending()
     Dim sql As String
 
@@ -1041,47 +1409,129 @@ Public Sub Query_order_list_pending()
     sql = sql & "PARAMETERS" & vbCrLf
     sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
     sql = sql & "    [p_date_from] DateTime," & vbCrLf
-    sql = sql & "    [p_date_to] DateTime;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255)," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_id] Long;" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    o.id AS id," & vbCrLf
-    sql = sql & "    o.uuid AS uuid," & vbCrLf
-    sql = sql & "    o.po_number AS po_number," & vbCrLf
-    sql = sql & "    o.order_date AS order_date," & vbCrLf
-    sql = sql & "    o.quantity AS quantity," & vbCrLf
-    sql = sql & "    o.ok_quantity_total AS ok_quantity_total," & vbCrLf
-    sql = sql & "    o.received_quantity_total AS received_quantity_total," & vbCrLf
-    sql = sql & "    o.remaining_quantity AS remaining_quantity," & vbCrLf
-    sql = sql & "    o.status AS [status]," & vbCrLf
-    sql = sql & "    o.remarks AS remarks," & vbCrLf
-    sql = sql & "    o.system_remarks AS system_remarks," & vbCrLf
-    sql = sql & "    o.person_in_charge AS person_in_charge," & vbCrLf
-    sql = sql & "    o.activated_at AS activated_at," & vbCrLf
-    sql = sql & "    s.id AS sparepart_id," & vbCrLf
-    sql = sql & "    s.code AS sparepart_code," & vbCrLf
-    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
-    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
-    sql = sql & "    v.id AS vendor_id," & vbCrLf
-    sql = sql & "    v.[name] AS vendor_name," & vbCrLf
-    sql = sql & "    p.[name] AS manufacturing_plant_name" & vbCrLf
+    sql = sql & "    l.id AS id," & vbCrLf
+    sql = sql & "    l.uuid AS uuid," & vbCrLf
+    sql = sql & "    l.po_number AS po_number," & vbCrLf
+    sql = sql & "    l.order_date AS order_date," & vbCrLf
+    sql = sql & "    l.quantity AS quantity," & vbCrLf
+    sql = sql & "    l.ok_quantity_total AS ok_quantity_total," & vbCrLf
+    sql = sql & "    l.received_quantity_total AS received_quantity_total," & vbCrLf
+    sql = sql & "    l.remaining_quantity AS remaining_quantity," & vbCrLf
+    sql = sql & "    l.status AS [status]," & vbCrLf
+    sql = sql & "    l.remarks AS remarks," & vbCrLf
+    sql = sql & "    l.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    l.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    l.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    l.estimated_arrival AS estimated_arrival," & vbCrLf
+    sql = sql & "    l.sparepart_id AS sparepart_id," & vbCrLf
+    sql = sql & "    l.sparepart_code AS sparepart_code," & vbCrLf
+    sql = sql & "    l.sparepart_name AS sparepart_name," & vbCrLf
+    sql = sql & "    l.sparepart_unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    l.vendor_id AS vendor_id," & vbCrLf
+    sql = sql & "    l.vendor_code AS vendor_code," & vbCrLf
+    sql = sql & "    l.vendor_name AS vendor_name," & vbCrLf
+    sql = sql & "    l.manufacturing_plant_name AS manufacturing_plant_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
-    sql = sql & "    ((vw_order_progress AS o" & vbCrLf
-    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
-    sql = sql & "            ON s.id = o.sparepart_id)" & vbCrLf
-    sql = sql & "        INNER JOIN manufacturing_plants AS p" & vbCrLf
-    sql = sql & "            ON p.id = o.manufacturing_plant_id)" & vbCrLf
-    sql = sql & "        LEFT JOIN vendors AS v" & vbCrLf
-    sql = sql & "            ON v.id = o.vendor_id" & vbCrLf
+    sql = sql & "    vw_order_list AS l" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
-    sql = sql & "    o.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
-    sql = sql & "    AND o.order_date >= [p_date_from]" & vbCrLf
-    sql = sql & "    AND o.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
-    sql = sql & "    AND o.remaining_quantity > 0" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.order_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND l.remaining_quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.vendor_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.estimated_arrival_text," & vbCrLf
+    sql = sql & "                    l.status," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_text))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    )" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        l.order_date < [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.order_date = [p_key_date] AND l.id < [p_key_id])," & vbCrLf
+    sql = sql & "        l.order_date > [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.order_date = [p_key_date] AND l.id > [p_key_id])" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
-    sql = sql & "    o.order_date," & vbCrLf
-    sql = sql & "    o.id;" & vbCrLf
+    sql = sql & "    l.order_date," & vbCrLf
+    sql = sql & "    l.id;" & vbCrLf
 
     SaveQuery "order_list_pending", sql
+End Sub
+
+'----------------------------------------------------------------------
+' order_list_pending_count.sql
+' Query   : order_list_pending_count
+' Type    : SELECT (one row)
+' Purpose : Number of rows order_list_pending returns over all its pages (same
+'           plant, date range and filter): BARIS DATA / TOTAL HALAMAN.
+'----------------------------------------------------------------------
+' Uses    : vw_order_list
+Public Sub Query_order_list_pending_count()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_date_from] DateTime," & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_order_list AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.order_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.order_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND l.remaining_quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.vendor_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.estimated_arrival_text," & vbCrLf
+    sql = sql & "                    l.status," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_text))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "order_list_pending_count", sql
 End Sub
 
 '----------------------------------------------------------------------
@@ -1184,15 +1634,27 @@ End Sub
 '----------------------------------------------------------------------
 ' receive_list.sql
 ' Query   : receive_list
-' Type    : SELECT
-' Purpose : Active receives of a plant that ARRIVED p_date_from ..
-'           p_date_to (whole days, both inclusive), with their order.
-'           remaining_quantity_before = order quantity minus the OK
-'           quantity of the receives before this one (never below 0).
+' Type    : SELECT (one page)
+' Purpose : Active, not deleted (received_quantity > 0) receives of a
+'           plant that ARRIVED p_date_from .. p_date_to (whole days,
+'           both inclusive), with their order (REKAP PENERIMAAN).
+' Filter  : p_filter_value is searched (contains, ignoring case) in
+'           the column number p_filter_index (list below); 0 = every
+'           column (search_text); blank value = no filter.
+' Paging  : keyset. p_direction 'NEXT' = rows after (p_key_date,
+'           p_key_id), 'PREV' = rows before it; first page = 'NEXT'
+'           from (1900-01-01, 0). The DAO reads the first page-size
+'           rows (NEXT) or the last ones (PREV) of the result.
+'           Columns for p_filter_index:
+'           1 order uuid, 2 receive uuid, 3 po_number,
+'           4 sparepart (code - name), 5 order date, 6 arrival date,
+'           7 verification date, 8 remaining before, 9 received,
+'           10 OK, 11 NOT OK, 12 unit, 13 remarks,
+'           14 person in charge.
+'           Sorted by (arrival_date, id). Total rows: receive_list_count.
 ' Replaces: select_receive_by_manufacturing_plant_name_and_arrival_date
-'           (which despite its name filtered on the ORDER date)
 '----------------------------------------------------------------------
-' Uses    : vw_order_progress, vw_receive_active, vw_receive_running_total
+' Uses    : vw_receive_list
 Public Sub Query_receive_list()
     Dim sql As String
 
@@ -1200,62 +1662,132 @@ Public Sub Query_receive_list()
     sql = sql & "PARAMETERS" & vbCrLf
     sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
     sql = sql & "    [p_date_from] DateTime," & vbCrLf
-    sql = sql & "    [p_date_to] DateTime;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255)," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_id] Long;" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    r.id AS id," & vbCrLf
-    sql = sql & "    r.uuid AS uuid," & vbCrLf
-    sql = sql & "    r.arrival_date AS arrival_date," & vbCrLf
-    sql = sql & "    r.verification_date AS verification_date," & vbCrLf
-    sql = sql & "    r.received_quantity AS received_quantity," & vbCrLf
-    sql = sql & "    r.ok_quantity AS ok_quantity," & vbCrLf
-    sql = sql & "    r.not_ok_quantity AS not_ok_quantity," & vbCrLf
-    sql = sql & "    r.remarks AS remarks," & vbCrLf
-    sql = sql & "    r.system_remarks AS system_remarks," & vbCrLf
-    sql = sql & "    r.person_in_charge AS person_in_charge," & vbCrLf
-    sql = sql & "    r.activated_at AS activated_at," & vbCrLf
-    sql = sql & "    IIf(" & vbCrLf
-    sql = sql & "        o.quantity - rr.earlier_ok_quantity < 0," & vbCrLf
-    sql = sql & "        0," & vbCrLf
-    sql = sql & "        o.quantity - rr.earlier_ok_quantity" & vbCrLf
-    sql = sql & "    ) AS remaining_quantity_before," & vbCrLf
-    sql = sql & "    o.id AS order_id," & vbCrLf
-    sql = sql & "    o.uuid AS order_uuid," & vbCrLf
-    sql = sql & "    o.po_number AS order_po_number," & vbCrLf
-    sql = sql & "    o.order_date AS order_date," & vbCrLf
-    sql = sql & "    o.quantity AS order_quantity," & vbCrLf
-    sql = sql & "    o.remarks AS order_remarks," & vbCrLf
-    sql = sql & "    s.id AS sparepart_id," & vbCrLf
-    sql = sql & "    s.code AS sparepart_code," & vbCrLf
-    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
-    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
-    sql = sql & "    v.id AS vendor_id," & vbCrLf
-    sql = sql & "    v.[name] AS vendor_name," & vbCrLf
-    sql = sql & "    p.[name] AS manufacturing_plant_name" & vbCrLf
+    sql = sql & "    l.id AS id," & vbCrLf
+    sql = sql & "    l.uuid AS uuid," & vbCrLf
+    sql = sql & "    l.arrival_date AS arrival_date," & vbCrLf
+    sql = sql & "    l.verification_date AS verification_date," & vbCrLf
+    sql = sql & "    l.received_quantity AS received_quantity," & vbCrLf
+    sql = sql & "    l.ok_quantity AS ok_quantity," & vbCrLf
+    sql = sql & "    l.not_ok_quantity AS not_ok_quantity," & vbCrLf
+    sql = sql & "    l.remarks AS remarks," & vbCrLf
+    sql = sql & "    l.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    l.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    l.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    l.remaining_quantity_before AS remaining_quantity_before," & vbCrLf
+    sql = sql & "    l.order_id AS order_id," & vbCrLf
+    sql = sql & "    l.order_uuid AS order_uuid," & vbCrLf
+    sql = sql & "    l.order_po_number AS order_po_number," & vbCrLf
+    sql = sql & "    l.order_date AS order_date," & vbCrLf
+    sql = sql & "    l.order_quantity AS order_quantity," & vbCrLf
+    sql = sql & "    l.order_remarks AS order_remarks," & vbCrLf
+    sql = sql & "    l.sparepart_id AS sparepart_id," & vbCrLf
+    sql = sql & "    l.sparepart_code AS sparepart_code," & vbCrLf
+    sql = sql & "    l.sparepart_name AS sparepart_name," & vbCrLf
+    sql = sql & "    l.sparepart_unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    l.vendor_id AS vendor_id," & vbCrLf
+    sql = sql & "    l.vendor_code AS vendor_code," & vbCrLf
+    sql = sql & "    l.vendor_name AS vendor_name," & vbCrLf
+    sql = sql & "    l.manufacturing_plant_name AS manufacturing_plant_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
-    sql = sql & "    ((((vw_receive_active AS r" & vbCrLf
-    sql = sql & "        INNER JOIN vw_receive_running_total AS rr" & vbCrLf
-    sql = sql & "            ON rr.id = r.id)" & vbCrLf
-    sql = sql & "        INNER JOIN vw_order_progress AS o" & vbCrLf
-    sql = sql & "            ON o.id = r.order_id)" & vbCrLf
-    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
-    sql = sql & "            ON s.id = o.sparepart_id)" & vbCrLf
-    sql = sql & "        INNER JOIN manufacturing_plants AS p" & vbCrLf
-    sql = sql & "            ON p.id = r.manufacturing_plant_id)" & vbCrLf
-    sql = sql & "        LEFT JOIN vendors AS v" & vbCrLf
-    sql = sql & "            ON v.id = o.vendor_id" & vbCrLf
+    sql = sql & "    vw_receive_list AS l" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
-    sql = sql & "    r.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
-    sql = sql & "    AND r.arrival_date >= [p_date_from]" & vbCrLf
-    sql = sql & "    AND r.arrival_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.arrival_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.arrival_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.received_quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.order_uuid," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.order_po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.arrival_date_text," & vbCrLf
+    sql = sql & "                    l.verification_date_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_before_text," & vbCrLf
+    sql = sql & "                    l.received_quantity_text," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.not_ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    )" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        l.arrival_date < [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.arrival_date = [p_key_date] AND l.id < [p_key_id])," & vbCrLf
+    sql = sql & "        l.arrival_date > [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.arrival_date = [p_key_date] AND l.id > [p_key_id])" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
-    sql = sql & "    o.order_date," & vbCrLf
-    sql = sql & "    o.id," & vbCrLf
-    sql = sql & "    r.arrival_date," & vbCrLf
-    sql = sql & "    r.activated_at," & vbCrLf
-    sql = sql & "    r.id;" & vbCrLf
+    sql = sql & "    l.arrival_date," & vbCrLf
+    sql = sql & "    l.id;" & vbCrLf
 
     SaveQuery "receive_list", sql
+End Sub
+
+'----------------------------------------------------------------------
+' receive_list_count.sql
+' Query   : receive_list_count
+' Type    : SELECT (one row)
+' Purpose : Number of rows receive_list returns over all its pages.
+'----------------------------------------------------------------------
+' Uses    : vw_receive_list
+Public Sub Query_receive_list_count()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_date_from] DateTime," & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_receive_list AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.arrival_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.arrival_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.received_quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.order_uuid," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.order_po_number," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.order_date_text," & vbCrLf
+    sql = sql & "                    l.arrival_date_text," & vbCrLf
+    sql = sql & "                    l.verification_date_text," & vbCrLf
+    sql = sql & "                    l.remaining_quantity_before_text," & vbCrLf
+    sql = sql & "                    l.received_quantity_text," & vbCrLf
+    sql = sql & "                    l.ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.not_ok_quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "receive_list_count", sql
 End Sub
 
 '----------------------------------------------------------------------
@@ -1360,12 +1892,25 @@ End Sub
 '----------------------------------------------------------------------
 ' request_list.sql
 ' Query   : request_list
-' Type    : SELECT
-' Purpose : Active requests of a plant dated p_date_from .. p_date_to
-'           (whole days, both inclusive).
+' Type    : SELECT (one page)
+' Purpose : Active, not deleted (quantity > 0) requests of a plant
+'           dated p_date_from .. p_date_to (whole days, both
+'           inclusive) (REKAP REQUEST).
+' Filter  : p_filter_value is searched (contains, ignoring case) in
+'           the column number p_filter_index (list below); 0 = every
+'           column (search_text); blank value = no filter.
+' Paging  : keyset. p_direction 'NEXT' = rows after (p_key_date,
+'           p_key_id), 'PREV' = rows before it; first page = 'NEXT'
+'           from (1900-01-01, 0). The DAO reads the first page-size
+'           rows (NEXT) or the last ones (PREV) of the result.
+'           Columns for p_filter_index:
+'           1 uuid, 2 sparepart (code - name), 3 quantity, 4 unit,
+'           5 mobile post (code - name), 6 request date, 7 remarks,
+'           8 person in charge.
+'           Sorted by (request_date, id). Total rows: request_list_count.
 ' Replaces: select_request_by_manufacturing_plant_name_and_order_date
 '----------------------------------------------------------------------
-' Uses    : vw_transaction_active
+' Uses    : vw_request_list
 Public Sub Query_request_list()
     Dim sql As String
 
@@ -1373,40 +1918,109 @@ Public Sub Query_request_list()
     sql = sql & "PARAMETERS" & vbCrLf
     sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
     sql = sql & "    [p_date_from] DateTime," & vbCrLf
-    sql = sql & "    [p_date_to] DateTime;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255)," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_id] Long;" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
-    sql = sql & "    rq.id AS id," & vbCrLf
-    sql = sql & "    t.uuid AS uuid," & vbCrLf
-    sql = sql & "    rq.request_date AS request_date," & vbCrLf
-    sql = sql & "    rq.quantity AS quantity," & vbCrLf
-    sql = sql & "    rq.remarks AS remarks," & vbCrLf
-    sql = sql & "    rq.system_remarks AS system_remarks," & vbCrLf
-    sql = sql & "    rq.person_in_charge AS person_in_charge," & vbCrLf
-    sql = sql & "    t.activated_at AS activated_at," & vbCrLf
-    sql = sql & "    s.id AS sparepart_id," & vbCrLf
-    sql = sql & "    s.code AS sparepart_code," & vbCrLf
-    sql = sql & "    s.[name] AS sparepart_name," & vbCrLf
-    sql = sql & "    s.unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
-    sql = sql & "    mm.id AS mobile_maintenance_id," & vbCrLf
-    sql = sql & "    mm.[name] AS mobile_maintenance_name" & vbCrLf
+    sql = sql & "    l.id AS id," & vbCrLf
+    sql = sql & "    l.uuid AS uuid," & vbCrLf
+    sql = sql & "    l.request_date AS request_date," & vbCrLf
+    sql = sql & "    l.quantity AS quantity," & vbCrLf
+    sql = sql & "    l.remarks AS remarks," & vbCrLf
+    sql = sql & "    l.system_remarks AS system_remarks," & vbCrLf
+    sql = sql & "    l.person_in_charge AS person_in_charge," & vbCrLf
+    sql = sql & "    l.activated_at AS activated_at," & vbCrLf
+    sql = sql & "    l.sparepart_id AS sparepart_id," & vbCrLf
+    sql = sql & "    l.sparepart_code AS sparepart_code," & vbCrLf
+    sql = sql & "    l.sparepart_name AS sparepart_name," & vbCrLf
+    sql = sql & "    l.sparepart_unit_of_measurement AS sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "    l.mobile_maintenance_id AS mobile_maintenance_id," & vbCrLf
+    sql = sql & "    l.mobile_maintenance_code AS mobile_maintenance_code," & vbCrLf
+    sql = sql & "    l.mobile_maintenance_name AS mobile_maintenance_name" & vbCrLf
     sql = sql & "FROM" & vbCrLf
-    sql = sql & "    ((requests AS rq" & vbCrLf
-    sql = sql & "        INNER JOIN vw_transaction_active AS t" & vbCrLf
-    sql = sql & "            ON t.id = rq.transaction_id)" & vbCrLf
-    sql = sql & "        INNER JOIN spareparts AS s" & vbCrLf
-    sql = sql & "            ON s.id = rq.sparepart_id)" & vbCrLf
-    sql = sql & "        INNER JOIN mobile_maintenances AS mm" & vbCrLf
-    sql = sql & "            ON mm.id = rq.mobile_maintenance_id" & vbCrLf
+    sql = sql & "    vw_request_list AS l" & vbCrLf
     sql = sql & "WHERE" & vbCrLf
-    sql = sql & "    t.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
-    sql = sql & "    AND rq.request_date >= [p_date_from]" & vbCrLf
-    sql = sql & "    AND rq.request_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.request_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.request_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.mobile_maintenance_display," & vbCrLf
+    sql = sql & "                    l.request_date_text," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    )" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        l.request_date < [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.request_date = [p_key_date] AND l.id < [p_key_id])," & vbCrLf
+    sql = sql & "        l.request_date > [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.request_date = [p_key_date] AND l.id > [p_key_id])" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
-    sql = sql & "    rq.request_date," & vbCrLf
-    sql = sql & "    t.uuid;" & vbCrLf
+    sql = sql & "    l.request_date," & vbCrLf
+    sql = sql & "    l.id;" & vbCrLf
 
     SaveQuery "request_list", sql
+End Sub
+
+'----------------------------------------------------------------------
+' request_list_count.sql
+' Query   : request_list_count
+' Type    : SELECT (one row)
+' Purpose : Number of rows request_list returns over all its pages.
+'----------------------------------------------------------------------
+' Uses    : vw_request_list
+Public Sub Query_request_list_count()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_date_from] DateTime," & vbCrLf
+    sql = sql & "    [p_date_to] DateTime," & vbCrLf
+    sql = sql & "    [p_filter_index] Long," & vbCrLf
+    sql = sql & "    [p_filter_value] Text(255);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_request_list AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.request_date >= [p_date_from]" & vbCrLf
+    sql = sql & "    AND l.request_date < DateAdd('d', 1, [p_date_to])" & vbCrLf
+    sql = sql & "    AND l.quantity > 0" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        [p_filter_value] IS NULL" & vbCrLf
+    sql = sql & "        OR InStr(1," & vbCrLf
+    sql = sql & "            IIf([p_filter_index] = 0," & vbCrLf
+    sql = sql & "                l.search_text," & vbCrLf
+    sql = sql & "                Choose([p_filter_index]," & vbCrLf
+    sql = sql & "                    l.uuid," & vbCrLf
+    sql = sql & "                    l.sparepart_display," & vbCrLf
+    sql = sql & "                    l.quantity_text," & vbCrLf
+    sql = sql & "                    l.sparepart_unit_of_measurement," & vbCrLf
+    sql = sql & "                    l.mobile_maintenance_display," & vbCrLf
+    sql = sql & "                    l.request_date_text," & vbCrLf
+    sql = sql & "                    l.remarks," & vbCrLf
+    sql = sql & "                    l.person_in_charge))," & vbCrLf
+    sql = sql & "            [p_filter_value]) > 0" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "request_list_count", sql
 End Sub
 
 '----------------------------------------------------------------------
@@ -1595,6 +2209,36 @@ Public Sub Query_sparepart_update()
 End Sub
 
 '----------------------------------------------------------------------
+' stock_ledger_count_by_month.sql
+' Query   : stock_ledger_count_by_month
+' Type    : SELECT (one row)
+' Purpose : Number of rows stock_ledger_list_by_month returns over all
+'           its pages.
+'----------------------------------------------------------------------
+' Uses    : vw_stock_ledger
+Public Sub Query_stock_ledger_count_by_month()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_sparepart_id] Long," & vbCrLf
+    sql = sql & "    [p_year] Short," & vbCrLf
+    sql = sql & "    [p_month] Short;" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    Count(*) AS total_rows" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_stock_ledger AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.sparepart_id = [p_sparepart_id]" & vbCrLf
+    sql = sql & "    AND l.movement_date >= DateSerial([p_year], [p_month], 1)" & vbCrLf
+    sql = sql & "    AND l.movement_date < DateSerial([p_year], [p_month] + 1, 1);" & vbCrLf
+
+    SaveQuery "stock_ledger_count_by_month", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' stock_ledger_get_available.sql
 ' Query   : stock_ledger_get_available
 ' Type    : SELECT
@@ -1714,14 +2358,59 @@ Public Sub Query_stock_ledger_get_balance()
 End Sub
 
 '----------------------------------------------------------------------
+' stock_ledger_get_balance_before.sql
+' Query   : stock_ledger_get_balance_before
+' Type    : SELECT (one row)
+' Purpose : Stock of one sparepart in one plant just before one stock
+'           card row, in the order of stock_ledger_list_by_month
+'           (movement_date, direction, reference): the STOK AWAL of
+'           the first row of a stock card page.
+'----------------------------------------------------------------------
+' Uses    : vw_stock_ledger
+Public Sub Query_stock_ledger_get_balance_before()
+    Dim sql As String
+
+    sql = ""
+    sql = sql & "PARAMETERS" & vbCrLf
+    sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
+    sql = sql & "    [p_sparepart_id] Long," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_direction] Text(3)," & vbCrLf
+    sql = sql & "    [p_key_reference] Text(36);" & vbCrLf
+    sql = sql & "SELECT" & vbCrLf
+    sql = sql & "    IIf(Sum(l.quantity_in) IS NULL, 0, Sum(l.quantity_in))" & vbCrLf
+    sql = sql & "    - IIf(Sum(l.quantity_out) IS NULL, 0, Sum(l.quantity_out)) AS balance" & vbCrLf
+    sql = sql & "FROM" & vbCrLf
+    sql = sql & "    vw_stock_ledger AS l" & vbCrLf
+    sql = sql & "WHERE" & vbCrLf
+    sql = sql & "    l.manufacturing_plant_id = [p_manufacturing_plant_id]" & vbCrLf
+    sql = sql & "    AND l.sparepart_id = [p_sparepart_id]" & vbCrLf
+    sql = sql & "    AND (" & vbCrLf
+    sql = sql & "        l.movement_date < [p_key_date]" & vbCrLf
+    sql = sql & "        OR (l.movement_date = [p_key_date]" & vbCrLf
+    sql = sql & "            AND (l.direction < [p_key_direction]" & vbCrLf
+    sql = sql & "                OR (l.direction = [p_key_direction]" & vbCrLf
+    sql = sql & "                    AND l.reference_uuid < [p_key_reference])))" & vbCrLf
+    sql = sql & "    );" & vbCrLf
+
+    SaveQuery "stock_ledger_get_balance_before", sql
+End Sub
+
+'----------------------------------------------------------------------
 ' stock_ledger_list_by_month.sql
 ' Query   : stock_ledger_list_by_month
-' Type    : SELECT
+' Type    : SELECT (one page)
 ' Purpose : Stock card (kartu stok) of one sparepart in one plant for
 '           one calendar month: every IN and OUT movement, receipts
 '           before issues on the same day.
 '           The date range (instead of Month()/Year()) lets Access use
 '           the date indexes.
+' Paging  : keyset, sorted by (movement_date, direction, reference).
+'           p_direction 'NEXT' = rows after  the key
+'           p_direction 'PREV' = rows before the key
+'           First page: 'NEXT' from (1900-01-01, '', '').
+'           Total rows: stock_ledger_count_by_month. STOK AWAL of the
+'           first row of a page: stock_ledger_get_balance_before.
 ' Replaces: select_stock_movement_by_manufacturing_plant_name_and_order_date
 '----------------------------------------------------------------------
 ' Uses    : vw_stock_ledger
@@ -1733,10 +2422,15 @@ Public Sub Query_stock_ledger_list_by_month()
     sql = sql & "    [p_manufacturing_plant_id] Long," & vbCrLf
     sql = sql & "    [p_sparepart_id] Long," & vbCrLf
     sql = sql & "    [p_year] Short," & vbCrLf
-    sql = sql & "    [p_month] Short;" & vbCrLf
-    sql = sql & vbCrLf
+    sql = sql & "    [p_month] Short," & vbCrLf
+    sql = sql & "    [p_direction] Text(4)," & vbCrLf
+    sql = sql & "    [p_key_date] DateTime," & vbCrLf
+    sql = sql & "    [p_key_direction] Text(3)," & vbCrLf
+    sql = sql & "    [p_key_reference] Text(36);" & vbCrLf
     sql = sql & "SELECT" & vbCrLf
     sql = sql & "    l.movement_date AS movement_date," & vbCrLf
+    sql = sql & "    l.direction AS direction," & vbCrLf
+    sql = sql & "    l.reference_uuid AS reference_uuid," & vbCrLf
     sql = sql & "    IIf(l.direction = 'IN', l.reference_uuid, '') AS incoming_reference," & vbCrLf
     sql = sql & "    IIf(l.direction = 'IN', l.counterparty_name, '') AS incoming_from," & vbCrLf
     sql = sql & "    IIf(l.direction = 'IN', l.quantity_in, NULL) AS incoming_quantity," & vbCrLf
@@ -1752,9 +2446,23 @@ Public Sub Query_stock_ledger_list_by_month()
     sql = sql & "    AND l.sparepart_id = [p_sparepart_id]" & vbCrLf
     sql = sql & "    AND l.movement_date >= DateSerial([p_year], [p_month], 1)" & vbCrLf
     sql = sql & "    AND l.movement_date < DateSerial([p_year], [p_month] + 1, 1)" & vbCrLf
+    sql = sql & "    AND IIf(" & vbCrLf
+    sql = sql & "        [p_direction] = 'PREV'," & vbCrLf
+    sql = sql & "        l.movement_date < [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.movement_date = [p_key_date]" & vbCrLf
+    sql = sql & "                AND (l.direction < [p_key_direction]" & vbCrLf
+    sql = sql & "                    OR (l.direction = [p_key_direction]" & vbCrLf
+    sql = sql & "                        AND l.reference_uuid < [p_key_reference])))," & vbCrLf
+    sql = sql & "        l.movement_date > [p_key_date]" & vbCrLf
+    sql = sql & "            OR (l.movement_date = [p_key_date]" & vbCrLf
+    sql = sql & "                AND (l.direction > [p_key_direction]" & vbCrLf
+    sql = sql & "                    OR (l.direction = [p_key_direction]" & vbCrLf
+    sql = sql & "                        AND l.reference_uuid > [p_key_reference])))" & vbCrLf
+    sql = sql & "    )" & vbCrLf
     sql = sql & "ORDER BY" & vbCrLf
     sql = sql & "    l.movement_date," & vbCrLf
-    sql = sql & "    l.direction;" & vbCrLf
+    sql = sql & "    l.direction," & vbCrLf
+    sql = sql & "    l.reference_uuid;" & vbCrLf
 
     SaveQuery "stock_ledger_list_by_month", sql
 End Sub

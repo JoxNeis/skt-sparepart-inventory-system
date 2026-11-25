@@ -3,82 +3,158 @@ Option Explicit
 
 ' =========================================================
 ' DAO - USER
+' Table: users
 '
 ' One function = one saved Access query.
-' Validation, transaction, row-count checks, activity log
-' and the can_approve conversion live in serviceUser.
-' The SIMPAN button logic lives in sMasterDataUser.
+' Validation, transaction, row-count checks and activity
+' log live in serviceUser.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "DAO_USER"
-
-Private Const QUERY_SELECT_USERS As String = _
-    "select_users"
+Private Const MODULE_NAME As String = "daoUser"
 
 
-' select_users
-' Returns a disconnected recordset (the caller closes it).
-Public Function SelectUsers( _
-    ByVal conn As ADODB.connection) As ADODB.recordset
+' user_list
+' Active users of every plant, ordered by username.
+Public Function ListUsers( _
+    ByVal conn As ADODB.connection) As Collection
 
     Dim cmd As ADODB.Command
+    Dim rs As ADODB.recordset
+    Dim users As Collection
 
-    Set cmd = managerDatabase.CreateCommand(conn, QUERY_SELECT_USERS)
+    Set cmd = managerDatabase.CreateCommand(conn, "user_list")
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
 
-    Set SelectUsers = managerDatabase.ExecuteRecordset(cmd)
+    Set users = New Collection
+
+    Do While Not rs.EOF
+        users.Add MapUser(rs)
+        rs.MoveNext
+    Loop
+
+    managerDatabase.CloseRecordset rs
+
+    Set ListUsers = users
 
 End Function
 
 
-' create_user
-' Parameter order: p_manufacturing_plant_name, p_username,
-' p_first_name, p_middle_name, p_last_name, p_position,
-' p_tier.
-' Returns the affected row count.
+' user_create
 Public Function CreateUser( _
     ByVal conn As ADODB.connection, _
-    ByVal manufacturingPlantName As String, _
-    ByVal username As String, _
-    ByVal firstName As String, _
-    ByVal middleName As String, _
-    ByVal lastName As String, _
-    ByVal position As String, _
-    ByVal tier As Long) As Long
+    ByVal userItem As User) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = managerDatabase.CreateCommand(conn, "create_user")
+    Set cmd = managerDatabase.CreateCommand(conn, "user_create")
 
-    managerDatabase.AddTextParameter cmd, "p_manufacturing_plant_name", manufacturingPlantName
-    managerDatabase.AddTextParameter cmd, "p_username", username
-    managerDatabase.AddTextParameter cmd, "p_first_name", firstName
-    managerDatabase.AddTextParameter cmd, "p_middle_name", middleName
-    managerDatabase.AddTextParameter cmd, "p_last_name", lastName
-    managerDatabase.AddTextParameter cmd, "p_position", position
-    managerDatabase.AddLongParameter cmd, "p_tier", tier
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", userItem.ManufacturingPlant.Id
+    managerDatabase.AddTextParameter cmd, "p_username", userItem.Username, 64
+    managerDatabase.AddTextParameter cmd, "p_first_name", userItem.FirstName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_middle_name", userItem.MiddleName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_last_name", userItem.LastName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_jobdesk", userItem.Jobdesk, 255
+    managerDatabase.AddLongParameter cmd, "p_tier", userItem.Tier
 
     CreateUser = managerDatabase.ExecuteNonQuery(cmd)
 
 End Function
 
 
-' compare_user
-' Parameter order: p_requestor_username, p_approver_username.
-' Returns a disconnected recordset with the can_approve
-' field. No row means requestor or approver was not found.
-' The caller closes it.
-Public Function CompareUser( _
+' user_update (the username cannot change)
+Public Function UpdateUser( _
     ByVal conn As ADODB.connection, _
-    ByVal requestorUsername As String, _
-    ByVal approverUsername As String) As ADODB.recordset
+    ByVal userItem As User) As Long
 
     Dim cmd As ADODB.Command
 
-    Set cmd = managerDatabase.CreateCommand(conn, "compare_user")
+    Set cmd = managerDatabase.CreateCommand(conn, "user_update")
 
-    managerDatabase.AddTextParameter cmd, "p_requestor_username", requestorUsername
-    managerDatabase.AddTextParameter cmd, "p_approver_username", approverUsername
+    managerDatabase.AddLongParameter cmd, "p_user_id", userItem.Id
+    managerDatabase.AddLongParameter cmd, "p_manufacturing_plant_id", userItem.ManufacturingPlant.Id
+    managerDatabase.AddTextParameter cmd, "p_first_name", userItem.FirstName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_middle_name", userItem.MiddleName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_last_name", userItem.LastName, 100
+    managerDatabase.AddNullableTextParameter cmd, "p_jobdesk", userItem.Jobdesk, 255
+    managerDatabase.AddLongParameter cmd, "p_tier", userItem.Tier
 
-    Set CompareUser = managerDatabase.ExecuteRecordset(cmd)
+    UpdateUser = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' user_archive
+Public Function ArchiveUser( _
+    ByVal conn As ADODB.connection, _
+    ByVal userId As Long) As Long
+
+    Dim cmd As ADODB.Command
+
+    Set cmd = managerDatabase.CreateCommand(conn, "user_archive")
+
+    managerDatabase.AddLongParameter cmd, "p_user_id", userId
+
+    ArchiveUser = managerDatabase.ExecuteNonQuery(cmd)
+
+End Function
+
+
+' user_check_can_approve
+' False when either user is unknown or the approver is
+' archived or does not have a higher tier.
+Public Function CheckCanApprove( _
+    ByVal conn As ADODB.connection, _
+    ByVal requestedBy As String, _
+    ByVal approvedBy As String) As Boolean
+
+    Dim cmd As ADODB.Command
+    Dim rs As ADODB.recordset
+
+    Set cmd = managerDatabase.CreateCommand(conn, "user_check_can_approve")
+
+    managerDatabase.AddTextParameter cmd, "p_requested_by", requestedBy, 64
+    managerDatabase.AddTextParameter cmd, "p_approved_by", approvedBy, 64
+
+    Set rs = managerDatabase.ExecuteRecordset(cmd)
+
+    If rs.EOF Then
+        CheckCanApprove = False
+    Else
+        CheckCanApprove = managerDatabase.FieldBoolean(rs, "can_approve")
+    End If
+
+    managerDatabase.CloseRecordset rs
+
+End Function
+
+
+' =========================================================
+' INTERNAL
+' =========================================================
+
+Private Function MapUser( _
+    ByVal rs As ADODB.recordset) As User
+
+    Dim userItem As User
+    Dim plantItem As ManufacturingPlant
+
+    Set plantItem = New ManufacturingPlant
+    plantItem.Id = managerDatabase.FieldLong(rs, "manufacturing_plant_id")
+    plantItem.Name = managerDatabase.FieldText(rs, "manufacturing_plant_name")
+
+    Set userItem = New User
+
+    With userItem
+        .Id = managerDatabase.FieldLong(rs, "id")
+        Set .ManufacturingPlant = plantItem
+        .Username = managerDatabase.FieldText(rs, "username")
+        .FirstName = managerDatabase.FieldText(rs, "first_name")
+        .MiddleName = managerDatabase.FieldText(rs, "middle_name")
+        .LastName = managerDatabase.FieldText(rs, "last_name")
+        .Jobdesk = managerDatabase.FieldText(rs, "jobdesk")
+        .Tier = managerDatabase.FieldLong(rs, "tier")
+    End With
+
+    Set MapUser = userItem
 
 End Function

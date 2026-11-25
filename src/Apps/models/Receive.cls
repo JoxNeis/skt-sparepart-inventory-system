@@ -123,26 +123,11 @@ Public Property Set Order(ByVal value As Order)
             CLASS_NAME & ": Order tidak boleh kosong."
     End If
 
-    If value.Quantity > 0 Then
-
-        If mReceivedQuantity > value.Quantity Then
-            managerError.ThrowError _
-                entitiesReceive.ReceivedQuantityExceedsOrder, _
-                CLASS_NAME & ".Order", _
-                CLASS_NAME & _
-                ": Total penerimaan tidak boleh melebihi jumlah order."
-        End If
-
-        If mOkQuantity > value.Quantity Then
-            managerError.ThrowError _
-                entitiesReceive.OkQuantityExceedsOrder, _
-                CLASS_NAME & ".Order", _
-                CLASS_NAME & _
-                ": Jumlah barang OK tidak boleh melebihi jumlah order."
-        End If
-
-    End If
-
+    ' No "received > ordered" check here: an approved order
+    ' update may lower the ordered quantity after goods were
+    ' received, and those rows must still load. serviceReceive
+    ' checks the OK quantity against the remaining quantity
+    ' when a receive is created or proposed.
     Set mOrder = value
 
 End Property
@@ -247,16 +232,6 @@ Public Property Let ReceivedQuantity(ByVal value As Long)
             CLASS_NAME & ": Total penerimaan tidak boleh negatif."
     End If
 
-    If Not mOrder Is Nothing Then
-        If mOrder.Quantity > 0 And value > mOrder.Quantity Then
-            managerError.ThrowError _
-                entitiesReceive.ReceivedQuantityExceedsOrder, _
-                CLASS_NAME & ".ReceivedQuantity", _
-                CLASS_NAME & _
-                ": Total penerimaan tidak boleh melebihi jumlah order."
-        End If
-    End If
-
     If mOkQuantity + mNotOkQuantity > value Then
         managerError.ThrowError _
             entitiesReceive.OkNotOkExceedsReceived, _
@@ -292,16 +267,6 @@ Public Property Let OkQuantity(ByVal value As Long)
             CLASS_NAME & ".OkQuantity", _
             CLASS_NAME & _
             ": Total barang OK dan tidak OK melebihi total penerimaan."
-    End If
-
-    If Not mOrder Is Nothing Then
-        If mOrder.Quantity > 0 And value > mOrder.Quantity Then
-            managerError.ThrowError _
-                entitiesReceive.OkQuantityExceedsOrder, _
-                CLASS_NAME & ".OkQuantity", _
-                CLASS_NAME & _
-                ": Jumlah barang OK tidak boleh melebihi jumlah order."
-        End If
     End If
 
     mOkQuantity = value

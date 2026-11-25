@@ -155,7 +155,7 @@ Public Enum entitiesOrder
     PoNumberTooLong = 11405         ' > 50
     EmptyOrderDate = 11406
     FutureOrderDate = 11407
-    InvalidQuantity = 11408         ' Quantity <= 0
+    InvalidQuantity = 11408         ' Quantity < 0 (0 = deleted by an update)
     EmptyPersonInCharge = 11409
     PersonInChargeTooLong = 11410   ' > 255
     NegativeOkQuantityTotal = 11411
@@ -205,7 +205,7 @@ Public Enum entitiesRequest
     EmptySparepart = 11505
     EmptyRequestDate = 11506
     FutureRequestDate = 11507
-    InvalidQuantity = 11508         ' Quantity <= 0
+    InvalidQuantity = 11508         ' Quantity < 0 (0 = deleted by an update)
     EmptyPersonInCharge = 11509
     PersonInChargeTooLong = 11510   ' > 255
 End Enum

@@ -1,11 +1,11 @@
 SPAREPART INVENTORY SYSTEM - DATABASE MIGRATION
 Version 1 - initial_schema
-Generated 2026-11-24 15:20
+Generated 2026-11-25 08:21
 
 Files
   migrationInit.bas     starts the migration (RunMigration)
   migrationTables.bas   creates the tables (16 files)
-  migrationQueries.bas  creates the saved queries (54 files)
+  migrationQueries.bas  creates the saved queries (64 files)
 
 This folder holds the whole database structure. It works on an empty
 .accdb and on a database that has an older migration version.

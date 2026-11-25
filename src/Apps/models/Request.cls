@@ -168,7 +168,9 @@ End Property
 
 
 ' =========================================================
-' QUANTITY                              [quantity] LONG NOT NULL > 0
+' QUANTITY                              [quantity] LONG NOT NULL >= 0
+' 0 = deleted through an approved update. A NEW request must
+' be above 0: serviceRequest checks that.
 ' =========================================================
 Public Property Get Quantity() As Long
     Quantity = mQuantity
@@ -176,11 +178,11 @@ End Property
 
 Public Property Let Quantity(ByVal value As Long)
 
-    If managerValidationNumeric.IsZeroOrNegative(value) Then
+    If managerValidationNumeric.IsNegative(value) Then
         managerError.ThrowError _
             entitiesRequest.InvalidQuantity, _
             CLASS_NAME & ".Quantity", _
-            CLASS_NAME & ": Jumlah barang harus lebih besar dari 0."
+            CLASS_NAME & ": Jumlah barang tidak boleh negatif."
     End If
 
     mQuantity = value

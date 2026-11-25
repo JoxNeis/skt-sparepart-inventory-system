@@ -11,8 +11,8 @@ parts inventory, stock movements and maintenance activities.
 
 ## Master data
 
-Master data is maintained on the `sMasterData*` sheets. Rows are never hard
-deleted: archiving sets `deleted_at`, and archived rows are hidden from pick lists.
+Rows are never hard deleted: archiving sets `deleted_at`, and archived rows are
+hidden from pick lists.
 
 | Master data | Table | Key / uniqueness | Notes |
 | --- | --- | --- | --- |
@@ -185,12 +185,12 @@ corrected directly from the order recap, without approval, and is logged as
 
 #### Update flow
 
-| Step | Who | Where | What happens |
-| --- | --- | --- | --- |
-| 1. Propose | Any user | `sRecapPendingOrder`, `sRecapPenerimaan`, `sRecapRequest` | The corrected values are saved as a new **draft** document (new document number) and a pending row in `transaction_update_requests` (original, proposed, reason, requested by / at). Nothing else changes: stock, order progress and the original document stay as they were. |
-| 2. Review | A user with a **higher tier** than the requester, not archived | `sUpdateOrder`, `sUpdatePenerimaan`, `sUpdateRequest` | The reviewer compares the original and the proposed document and gives the verdict, with an optional decision note. |
-| 3a. Approve | Reviewer | same | In **one** database transaction: the update request is marked `APPROVED`, the original is reversed, the proposed document is activated, and the follow-up for that document type runs (see below). If any step fails, nothing is saved. |
-| 3b. Reject | Reviewer | same | The update request is marked `REJECTED` and the proposed draft is reversed, so it can never be activated. The original stays active and can be proposed for update again. |
+| Step | Who | What happens |
+| --- | --- | --- |
+| 1. Propose | Any user | The corrected values are saved as a new **draft** document (new document number) and a pending row in `transaction_update_requests` (original, proposed, reason, requested by / at). Nothing else changes: stock, order progress and the original document stay as they were. |
+| 2. Review | A user with a **higher tier** than the requester, not archived | The reviewer compares the original and the proposed document and gives the verdict, with an optional decision note. |
+| 3a. Approve | Reviewer | In **one** database transaction: the update request is marked `APPROVED`, the original is reversed, the proposed document is activated, and the follow-up for that document type runs (see below). If any step fails, nothing is saved. |
+| 3b. Reject | Reviewer | The update request is marked `REJECTED` and the proposed draft is reversed, so it can never be activated. The original stays active and can be proposed for update again. |
 
 | Update request | `verdict` | Original document | Proposed document |
 | --- | --- | --- | --- |
@@ -255,7 +255,7 @@ proposed request. The plant must still have enough stock for the proposed quanti
 
 ### Stock and reorder point
 
-The stock ledger (`vw_stock_ledger`, the *Kartu Stock* sheet) is built only from
+The stock ledger (`vw_stock_ledger`) is built only from
 **active** transactions:
 
 | Direction | Source | Date |
@@ -362,17 +362,93 @@ SIS.xlsm                     Excel front end
 SIS.accdb                    Access database
 src/
 ├─ apps/
-│  ├─ views/                 sheet code: sInput*, sUpdate*, sRecap*, sMasterData*, sInventory, sKartuStock
-│  ├─ forms/                 user forms (formTanggal)
+│  ├─ views/                 sheet modules (sheet*.cls) and ThisWorkbook: events only
+│  ├─ forms/                 formTanggal (date picker, .frm + .frx)
 │  ├─ models/                entity classes (Order, Receive, Request, Sparepart, ...)
 │  └─ modules/
-│     ├─ core/               config, helpers, scripts
-│     ├─ managers/           database, error, form, table, validation
+│     ├─ core/               config, helpers, JSON, application start (coreApp)
+│     ├─ managers/           database, error, form, table, validation, sheet,
+│     │                      list (dropdowns), paging, navigation, email
+│     ├─ controllers/        one per sheet: reads / writes cells, calls services
 │     ├─ services/           business rules, one DB transaction per entry point
-│     ├─ dao/                calls to the saved Access queries
-│     └─ tests/
+│     └─ dao/                one function per saved Access query
 └─ database/
    ├─ tables/                one CREATE TABLE file per table (00–15)
    ├─ queries/               saved queries and views (vw_*)
    └─ migration/             builds the .accdb, see its README
 ```
+
+---
+
+## Excel application
+
+### Layers
+
+```text
+Sheet (event) -> Controller -> Service -> DAO -> managerDatabase -> SIS.accdb
+```
+
+| Layer | Does | Does not |
+| --- | --- | --- |
+| Sheet module (`views/sheet*.cls`) | Forwards `Activate`, `BeforeDoubleClick` and `Change` to its controller; the sidebar is handled first | Any logic |
+| Controller (`controllers/`) | Reads and checks cells, fills tables, dropdowns, paging, messages | SQL, business rules |
+| Service (`services/`) | Business rules, one database transaction per public entry point, activity log | Touch cells |
+| DAO (`dao/`) | Runs exactly one saved query and maps rows to models | Open, commit or roll back |
+
+### Setting up the workbook
+
+1. In the VBA editor (Alt+F11): **Tools > References** and tick
+   **Microsoft ActiveX Data Objects 6.1 Library**.
+2. Import every `.bas` from `src/apps/modules` and every `.cls` from
+   `src/apps/models` and `src/apps/modules/managers/PagingManager`, and
+   `src/apps/forms/formTanggal.frm` (keep `formTanggal.frx` next to it).
+3. Paste the code of each `src/apps/views/sheet*.cls` into the sheet with the
+   same code name (`sheetInputOrder` = INPUT_ORDER, ...) and
+   `ThisWorkbook.cls` into ThisWorkbook.
+4. Put `SIS.accdb` next to `SIS.xlsm`, re-run `RunMigration` (see the
+   [migration README](src/database/migration/README.md)) so the saved queries
+   are current, and add at least one plant in Access
+   (`manufacturing_plants`).
+5. Open the workbook, choose the plant in **SETTINGS > LOKASI** and register
+   your Windows user in **MASTER DATA USER**: every document stores who made
+   it.
+
+A database built before quantity 0 meant "deleted" still has
+`quantity > 0` checks on `orders` and `requests`. The migration does not
+change existing constraints, so run this once in Access (SQL view, ANSI-92):
+
+```sql
+ALTER TABLE orders DROP CONSTRAINT ck_orders_quantity;
+ALTER TABLE orders ADD CONSTRAINT ck_orders_quantity CHECK (quantity >= 0);
+ALTER TABLE requests DROP CONSTRAINT ck_requests_quantity;
+ALTER TABLE requests ADD CONSTRAINT ck_requests_quantity CHECK (quantity >= 0);
+```
+
+### Using the sheets
+
+- **Clickable cells are double-clicked**: menu rows in the sidebar, buttons
+  (SIMPAN, CARI, TAMBAH BARIS, ...) and the action columns of tables
+  (EDIT, HAPUS, CHECK, SIMPAN PO ID, SIMPAN).
+- **Dates** are picked with the date form: double-click any date cell.
+- **Plants, spareparts, vendors and mobile posts** are dropdowns. Sparepart,
+  vendor and mobile post dropdowns show and pass the display value
+  `code - name` (e.g. `V0001 - PT MAJU`). The sparepart list is
+  `MD_SPAREPART[DISPLAY]`; the vendor and mobile post lists are kept on the
+  hidden sheet `LISTS` and rewritten whenever `MD_VENDOR` / `MD_POS_MOBILE`
+  are refreshed (those tables have no DISPLAY column). Plants come from
+  Access into `LISTS` on open. The POS MOBILE list shows the plant of the
+  request sheet in use. New vendors get the code `V0001`, `V0002`, ...
+- **Recap sheets** (CARI): BARIS DATA / TOTAL HALAMAN show the result,
+  SEBELUMNYA / SELANJUTNYA page through it, FILTER PENCARIAN (KOLOM + NILAI)
+  and BARIS YANG DITAMPILKAN filter and size the pages without another query.
+- **Corrections** follow the [update flow](#update): EDIT makes a row editable
+  (yellow) and shows AJUKAN; AJUKAN asks the reason and saves the proposal;
+  BATAL restores the row; HAPUS proposes quantity 0. Proposals are approved or
+  rejected on **REQUEST UPDATE** (CHECK shows old and new values).
+- **PO ID** is saved directly (REKAP ORDER: type it; PENDING ORDER and INPUT
+  PENERIMAAN: type it and save).
+- **KIRIM EMAIL** (INPUT ORDER) writes an unsent `.eml` email (in
+  `%TEMP%\SIS Email`) with the orders in the table (or the last saved orders)
+  for the TO / CC / BCC lists on SETTINGS and opens it with the default mail
+  app, so it works with the new Outlook. Make Outlook the default app for
+  `.eml` files (Windows Settings > Apps > Default apps).

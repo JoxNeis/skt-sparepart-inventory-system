@@ -1,11 +1,18 @@
+VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} formTanggal 
+   Caption         =   "PILIH TANGGAL"
+   ClientHeight    =   2440
+   ClientLeft      =   110
+   ClientTop       =   450
+   ClientWidth     =   4220
+   OleObjectBlob   =   "formTanggal.frx":0000
+   StartUpPosition =   1  'CenterOwner
+End
 Attribute VB_Name = "formTanggal"
-Attribute VB_Base = "0{7277BBC4-838C-4530-9271-89B15597794E}{43BF3E1D-BD70-4CF7-976E-24C0273D7A27}"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-Attribute VB_TemplateDerived = False
-Attribute VB_Customizable = False
 Option Explicit
 
 Private Sub UserForm_Initialize()

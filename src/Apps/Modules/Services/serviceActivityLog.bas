@@ -6,10 +6,11 @@ Option Explicit
 '
 ' Helper used by other services INSIDE their transaction.
 ' It receives the caller's connection and never begins,
-' commits or rolls back by itself.
+' commits or rolls back by itself, so the log row is saved
+' together with the change it describes.
 ' =========================================================
 
-Private Const MODULE_NAME As String = "SERVICE_ACTIVITY_LOG"
+Private Const MODULE_NAME As String = "serviceActivityLog"
 
 ' =========================================================
 ' ERROR CODES (17100 - 17199)
@@ -21,11 +22,15 @@ Public Const InsertFailed As Long = 17103          ' 0 rows inserted
 
 
 ' Insert one activity log row on the caller's connection.
-' user defaults to coreConfig.currentUser().
+'   activityCode : e.g. Order.Create, Vendor.Update
+'   detail       : human-readable text
+'   json         : the document / master data as JSON
+'   user         : defaults to coreConfig.currentUser()
 Public Sub WriteActivityLog( _
     ByVal conn As ADODB.connection, _
     ByVal activityCode As String, _
     ByVal detail As String, _
+    Optional ByVal json As String = vbNullString, _
     Optional ByVal user As String = vbNullString)
 
     On Error GoTo ErrorHandler
@@ -55,14 +60,12 @@ Public Sub WriteActivityLog( _
     End If
 
     affected = daoActivityLog.CreateActivityLog( _
-        conn, activityCode, detail, user)
+        conn, activityCode, detail, json, user)
 
-    If managerValidationNumeric.IsLessThan(affected, 1) Then
-        managerError.ThrowError _
-            serviceActivityLog.InsertFailed, _
-            MODULE_NAME & ".WriteActivityLog", _
-            "Activity log tidak tersimpan (0 baris terpengaruh)."
-    End If
+    managerDatabase.RequireAffectedRows affected, 1, _
+        serviceActivityLog.InsertFailed, _
+        MODULE_NAME & ".WriteActivityLog", _
+        "Activity log tidak tersimpan (0 baris terpengaruh)."
 
     Exit Sub
 
